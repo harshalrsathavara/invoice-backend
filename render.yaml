@@ -24,6 +24,13 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Mobile number the app signs in with (OTP). Optional.
+      - key: ADMIN_PHONE
+        sync: false
+      # Test mode: the OTP is fixed at 123456 and returned to the app so it
+      # can prefill the field. Set to false once SMS delivery exists.
+      - key: OTP_DEBUG
+        value: "true"
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL

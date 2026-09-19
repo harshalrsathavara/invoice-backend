@@ -21,7 +21,8 @@ if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
     php artisan invoice:admin --no-interaction \
         --name="${ADMIN_NAME:-Admin}" \
         --email="$ADMIN_EMAIL" \
-        --password="$ADMIN_PASSWORD"
+        --password="$ADMIN_PASSWORD" \
+        ${ADMIN_PHONE:+--phone="$ADMIN_PHONE"}
 fi
 php artisan config:cache
 php artisan route:cache

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use App\Services\OtpService;
 use Illuminate\Support\Facades\Hash;
 
 class CreateAdminCommand extends Command
@@ -11,7 +12,8 @@ class CreateAdminCommand extends Command
     protected $signature = 'invoice:admin
                             {--name= : The name shown in the panel}
                             {--email= : Sign-in address}
-                            {--password= : Sign-in password}';
+                            {--password= : Sign-in password}
+                            {--phone= : Mobile number for OTP sign-in}';
 
     protected $description = 'Create (or promote) the administrator account';
 
@@ -20,6 +22,7 @@ class CreateAdminCommand extends Command
         $name = $this->option('name') ?: $this->ask('Name');
         $email = $this->option('email') ?: $this->ask('Email');
         $password = $this->option('password') ?: $this->secret('Password');
+        $phone = $this->option('phone');
 
         if (! $name || ! $email || ! $password) {
             $this->error('Name, email and password are all required.');
@@ -29,7 +32,14 @@ class CreateAdminCommand extends Command
 
         $user = User::updateOrCreate(
             ['email' => $email],
-            ['name' => $name, 'password' => Hash::make($password), 'is_admin' => true],
+            array_filter([
+                'name' => $name,
+                'password' => Hash::make($password),
+                'is_admin' => true,
+                // Only set when given, so re-running without --phone does not
+                // wipe a number the account already signs in with.
+                'phone' => $phone ? app(OtpService::class)->normalise($phone) : null,
+            ], fn ($value) => $value !== null),
         );
 
         $this->info(($user->wasRecentlyCreated ? 'Created' : 'Updated')." administrator {$user->email}.");

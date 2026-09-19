@@ -57,6 +57,7 @@ class AuthController extends Controller
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'is_admin' => $user->is_admin,
             ],
             'device' => [
@@ -75,6 +76,7 @@ class AuthController extends Controller
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'is_admin' => $user->is_admin,
             ],
             'businesses' => $user->businesses()->pluck('uuid'),

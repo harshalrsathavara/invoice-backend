@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\OtpController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SyncController;
@@ -26,6 +27,16 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     Route::post('auth/login', [AuthController::class, 'login'])
+        ->middleware('throttle:6,1');
+
+    // Signing in with a phone number and a one-time code. Requesting is the
+    // cheaper call to abuse, so it is held to three a minute; verifying gets
+    // the same allowance as a password, and a wrong code is also counted
+    // against the code itself.
+    Route::post('auth/otp/request', [OtpController::class, 'request'])
+        ->middleware('throttle:3,1');
+
+    Route::post('auth/otp/verify', [OtpController::class, 'verify'])
         ->middleware('throttle:6,1');
 
     Route::middleware('auth:sanctum')->group(function () {
