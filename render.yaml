@@ -17,6 +17,13 @@ services:
         sync: false # paste output of: php artisan key:generate --show
       - key: APP_URL
         sync: false # e.g. https://invoice-backend.onrender.com
+      # Admin panel login, created/updated on every boot (free plan has no shell)
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
