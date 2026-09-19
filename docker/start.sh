@@ -4,6 +4,15 @@ set -e
 cd /var/www/html
 
 php artisan storage:link || true
+
+# SQLite (testing): the file isn't in the image, so create it on each boot.
+# Render's free disk is ephemeral — data resets whenever the service restarts.
+if [ "$DB_CONNECTION" = "sqlite" ]; then
+    DB_FILE="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+    touch "$DB_FILE"
+    chown www-data:www-data "$DB_FILE" "$(dirname "$DB_FILE")"
+fi
+
 php artisan migrate --force
 
 # Free Render services have no shell, so the admin is created from env vars.

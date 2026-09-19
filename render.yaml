@@ -28,22 +28,13 @@ services:
         value: stderr
       - key: LOG_LEVEL
         value: info
+      # Testing: SQLite inside the container (resets on every restart/sleep).
+      # For real data switch DB_CONNECTION to mysql and set DB_HOST, DB_PORT,
+      # DB_DATABASE, DB_USERNAME, DB_PASSWORD and MYSQL_ATTR_SSL_CA.
       - key: DB_CONNECTION
-        value: mysql
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        sync: false
+        value: sqlite
       - key: DB_DATABASE
-        sync: false
-      - key: DB_USERNAME
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      # CA bundle for SSL to the MySQL host. System bundle works for TiDB Cloud;
-      # for Aiven, add its ca.pem as a Render Secret File and use /etc/secrets/ca.pem
-      - key: MYSQL_ATTR_SSL_CA
-        value: /etc/ssl/certs/ca-certificates.crt
+        value: /var/www/html/database/database.sqlite
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_SECURE_COOKIE
