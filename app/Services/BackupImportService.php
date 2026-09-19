@@ -251,7 +251,7 @@ class BackupImportService
     private function restoreImages(array $images): array
     {
         $map = [];
-        $disk = Storage::disk('public');
+        $disk = Storage::disk(config('filesystems.business_images_disk'));
 
         foreach ($images as $oldPath => $base64) {
             $binary = base64_decode((string) $base64, true);

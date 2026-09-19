@@ -14,8 +14,9 @@ use Illuminate\Support\Str;
  * BusinessResource, but until now only a phone backup could fill them: nothing
  * in the panel or the API could upload one.
  *
- * Files follow the convention the importer already established — the `public`
- * disk, under business_images/, named by a fresh uuid — so an image that
+ * Files follow the convention the importer already established — the
+ * business-images disk (filesystems.business_images_disk), under
+ * business_images/, named by a fresh uuid — so an image that
  * arrived in a backup and one uploaded here are indistinguishable afterwards.
  *
  * They are not served from a public URL, though. A logo is harmless, but a
@@ -105,6 +106,6 @@ class BusinessImages
 
     private function disk()
     {
-        return Storage::disk('public');
+        return Storage::disk(config('filesystems.business_images_disk'));
     }
 }

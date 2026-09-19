@@ -47,3 +47,14 @@ services:
         value: database
       - key: FILESYSTEM_DISK
         value: local
+      # Business logos/signatures go to Cloudflare R2 (Render's disk is wiped on redeploy)
+      - key: BUSINESS_IMAGES_DISK
+        value: r2
+      - key: R2_ENDPOINT
+        sync: false # https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false

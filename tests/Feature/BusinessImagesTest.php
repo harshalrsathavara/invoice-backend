@@ -54,6 +54,22 @@ class BusinessImagesTest extends TestCase
         Storage::disk('public')->assertExists($business->signature_path);
     }
 
+    public function test_images_go_to_whichever_disk_is_configured(): void
+    {
+        // Production points this at R2 so images survive redeploys.
+        config(['filesystems.business_images_disk' => 'r2']);
+        Storage::fake('r2');
+
+        $this->put(route('admin.businesses.update', $this->business), [
+            'name' => $this->business->name,
+            'logo' => UploadedFile::fake()->image('logo.png'),
+        ])->assertSessionHasNoErrors();
+
+        $path = $this->business->fresh()->logo_path;
+        Storage::disk('r2')->assertExists($path);
+        Storage::disk('public')->assertMissing($path);
+    }
+
     public function test_a_new_business_can_be_added_with_its_logo_in_one_go(): void
     {
         $this->post(route('admin.businesses.store'), [
