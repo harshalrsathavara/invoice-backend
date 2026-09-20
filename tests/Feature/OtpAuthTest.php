@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OtpCodeMail;
 use App\Models\OtpCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -28,6 +30,7 @@ class OtpAuthTest extends TestCase
         config()->set('otp.debug', true);
         config()->set('otp.debug_code', '123456');
         config()->set('otp.allow_registration', false);
+        config()->set('otp.channel', 'email');
     }
 
     private function owner(array $attributes = []): User
@@ -177,6 +180,52 @@ class OtpAuthTest extends TestCase
         ])->assertOk();
 
         $this->assertDatabaseHas('users', ['phone' => '+919000000000']);
+    }
+
+    public function test_the_code_is_emailed_to_the_account(): void
+    {
+        Mail::fake();
+        $user = $this->owner();
+
+        $response = $this->postJson('/api/v1/auth/otp/request', ['phone' => self::PHONE])
+            ->assertOk();
+
+        Mail::assertSent(OtpCodeMail::class, function (OtpCodeMail $mail) use ($user) {
+            return $mail->hasTo($user->email) && $mail->code === '123456';
+        });
+
+        // Masked, so the owner can tell which address to check without the
+        // endpoint handing out a full address to anyone who asks.
+        $this->assertSame('o••••@example.com', $response->json('sent_to'));
+    }
+
+    public function test_an_unknown_number_is_sent_nothing(): void
+    {
+        Mail::fake();
+
+        $this->postJson('/api/v1/auth/otp/request', ['phone' => '+919000000000'])
+            ->assertOk()
+            ->assertJsonPath('sent_to', null);
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_mail_failure_does_not_break_sign_in(): void
+    {
+        // The code is still issued and still works; only the delivery fails.
+        Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp down'));
+        $this->owner();
+
+        $this->postJson('/api/v1/auth/otp/request', ['phone' => self::PHONE])
+            ->assertOk()
+            ->assertJsonPath('sent_to', null)
+            ->assertJsonPath('debug_code', '123456');
+
+        $this->postJson('/api/v1/auth/otp/verify', [
+            'phone' => self::PHONE,
+            'code' => '123456',
+            'device_name' => 'Nord',
+        ])->assertOk();
     }
 
     public function test_the_code_is_not_returned_when_test_mode_is_off(): void

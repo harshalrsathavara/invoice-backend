@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OtpCodeMail;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -42,16 +45,69 @@ class OtpController extends Controller
         }
 
         $issued = $this->otp->issue($phone);
+        $sentTo = $this->deliver($user, $issued['code']);
 
         return response()->json([
             'sent' => true,
             'expires_in_minutes' => (int) config('otp.ttl_minutes'),
 
-            // Test mode only: lets the app prefill the field while there is
-            // no SMS to read it from.
+            // Where it went, masked, so the app can say "check h••••@gmail.com"
+            // rather than leaving the owner guessing. Null when there was
+            // nowhere to send it.
+            'sent_to' => $sentTo,
+
+            // Test mode only: lets the app prefill the field while delivery
+            // is being set up.
             'debug_code' => config('otp.debug') ? $issued['code'] : null,
             'debug' => (bool) config('otp.debug'),
         ]);
+    }
+
+    /**
+     * Sends the code to the account's email address.
+     *
+     * Failure is swallowed on purpose: a mail server that is down must not
+     * turn into a 500 that tells an attacker the number exists, and in test
+     * mode the code comes back in the response anyway. The failure is logged
+     * so it can be found when someone says they never got it.
+     *
+     * A number registering for the first time has no account yet, and so
+     * nowhere to send to — in that case the code only comes back in the
+     * response, which is why registration is for test mode.
+     *
+     * @return string|null the masked address it went to
+     */
+    private function deliver(?User $user, string $code): ?string
+    {
+        if (! $user || config('otp.channel') !== 'email' || ! $user->email) {
+            return null;
+        }
+
+        try {
+            Mail::to($user->email)->send(new OtpCodeMail(
+                code: $code,
+                expiresInMinutes: (int) config('otp.ttl_minutes'),
+                name: $user->name,
+            ));
+        } catch (\Throwable $e) {
+            Log::error('OTP email failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $this->mask($user->email);
+    }
+
+    /** h••••@gmail.com — enough to recognise, not enough to harvest. */
+    private function mask(string $email): string
+    {
+        [$name, $domain] = array_pad(explode('@', $email, 2), 2, '');
+        $visible = mb_substr($name, 0, 1);
+
+        return $visible.str_repeat('•', max(mb_strlen($name) - 1, 1)).'@'.$domain;
     }
 
     /** Exchanges a valid code for a device token. */

@@ -19,6 +19,20 @@ return [
 
     'debug' => (bool) env('OTP_DEBUG', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Delivery
+    |--------------------------------------------------------------------------
+    |
+    | 'email' sends the code to the account's address, which costs nothing.
+    | 'none' issues codes without delivering them, which is only useful with
+    | debug on. WhatsApp charges per authentication template and SMS in India
+    | needs DLT registration, so both are deliberately left for later.
+    |
+    */
+
+    'channel' => env('OTP_CHANNEL', 'email'),
+
     'debug_code' => (string) env('OTP_DEBUG_CODE', '123456'),
 
     /*

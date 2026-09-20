@@ -28,9 +28,31 @@ services:
       - key: ADMIN_PHONE
         sync: false
       # Test mode: the OTP is fixed at 123456 and returned to the app so it
-      # can prefill the field. Set to false once SMS delivery exists.
+      # can prefill the field. Set to false once email delivery is set up.
       - key: OTP_DEBUG
         value: "true"
+      # Sign-in codes go by email — free, unlike WhatsApp templates, and with
+      # none of the DLT paperwork Indian SMS needs.
+      - key: OTP_CHANNEL
+        value: email
+      # Gmail works: turn on 2-step verification, then create an App Password
+      # (16 characters) and use it as MAIL_PASSWORD.
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_SCHEME
+        value: tls
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Invoice Generator
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
