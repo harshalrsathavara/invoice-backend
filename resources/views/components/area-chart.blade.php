@@ -32,8 +32,32 @@
     $line = $coords->map(fn ($c, $i) => ($i === 0 ? 'M' : 'L').$c[0].' '.$c[1])->implode(' ');
     $wash = $line.' L'.$coords->last()[0].' '.($top + $plotH).' L'.$coords->first()[0].' '.($top + $plotH).' Z';
 
-    $ticks = [0.0, $niceMax / 2, $niceMax];
+    // Three ticks, but only where they read differently. An empty period
+    // rounds 0 / 0.5 / 1 to "0", "1", "1" — the same label twice, which looks
+    // like a broken axis.
+    $ticks = collect([0.0, $niceMax / 2, $niceMax])
+        ->mapWithKeys(fn ($t) => [Money::compact($t) => $t])
+        ->values();
+
     $lastIndex = $points->count() - 1;
+
+    // "Apr 2026" is a month and shortens to "Apr"; "01 Jul" is a day and loses
+    // its meaning entirely as "01" — which is what produced a row of digits
+    // where the axis should be.
+    $axisLabel = fn (string $label) => preg_match('/\d{4}$/', $label)
+        ? \Str::before($label, ' ')
+        : $label;
+
+    // A label per point is right for twelve months and unreadable for ninety
+    // days. How many fit depends on how wide they are, so it is measured from
+    // the longest one rather than fixed: twelve short months all get named,
+    // while a quarter of daily labels is thinned to what can be read. Counted
+    // back from the end, so the newest point is always named.
+    $widest = $points->map(fn ($p) => mb_strlen($axisLabel($p['label'])))->max() ?? 0;
+    $labelWidth = $widest * 6.2 + 16; // ~6.2 viewBox units per character, plus a gap
+    $roomFor = max(2, (int) floor($plotW / max($labelWidth, 1)));
+    $labelEvery = max(1, (int) ceil($points->count() / $roomFor));
+    $labelAt = collect($lastIndex >= 0 ? range($lastIndex, 0, -$labelEvery) : [])->flip();
 @endphp
 
 <div class="chart" data-areachart>
@@ -62,7 +86,9 @@
         <circle class="hover-knot" cx="0" cy="0" r="5" />
 
         @foreach($points as $i => $point)
-            <text class="tick x" x="{{ $x($i) }}" y="{{ $h - 12 }}">{{ \Str::before($point['label'], ' ') }}</text>
+            @if($labelAt->has($i))
+                <text class="tick x" x="{{ $x($i) }}" y="{{ $h - 12 }}">{{ $axisLabel($point['label']) }}</text>
+            @endif
             {{-- Hit bands span the full column height, so hovering never needs precision. --}}
             <rect class="hit"
                   x="{{ round($x($i) - $step / 2, 2) }}" y="{{ $top }}"
