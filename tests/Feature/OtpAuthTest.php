@@ -228,6 +228,38 @@ class OtpAuthTest extends TestCase
         ])->assertOk();
     }
 
+    public function test_test_mode_lets_any_number_sign_in(): void
+    {
+        // What the default is, not what the tests set: while the code is
+        // fixed, any number typed into the app should get in.
+        config()->set('otp.allow_registration', (bool) config('otp.debug'));
+
+        $this->postJson('/api/v1/auth/otp/request', ['phone' => '+919111111111'])
+            ->assertOk()
+            ->assertJsonPath('debug_code', '123456');
+
+        $this->postJson('/api/v1/auth/otp/verify', [
+            'phone' => '+919111111111',
+            'code' => '123456',
+            'device_name' => 'Any handset',
+        ])->assertOk();
+    }
+
+    public function test_test_mode_off_closes_registration_too(): void
+    {
+        config()->set('otp.debug', false);
+        config()->set('otp.allow_registration', (bool) config('otp.debug'));
+
+        $this->postJson('/api/v1/auth/otp/request', ['phone' => '+919111111111'])
+            ->assertOk();
+
+        $this->postJson('/api/v1/auth/otp/verify', [
+            'phone' => '+919111111111',
+            'code' => '123456',
+            'device_name' => 'Any handset',
+        ])->assertStatus(422);
+    }
+
     public function test_the_code_is_not_returned_when_test_mode_is_off(): void
     {
         config()->set('otp.debug', false);

@@ -53,15 +53,20 @@ return [
     | Who may sign in
     |--------------------------------------------------------------------------
     |
-    | True lets an unknown number create its own (empty) account. False — the
-    | default — means the number has to belong to an account already, so a
-    | stranger's handset cannot quietly start its own set of books on your
-    | server. Give the owner's account a phone with:
+    | True lets an unknown number create its own (empty) account. False means
+    | the number has to belong to an account already, so a stranger's handset
+    | cannot quietly start its own set of books on your server. Give the
+    | owner's account a phone with:
     |
     |     php artisan invoice:admin --email=… --phone=+919876543210
     |
+    | It follows test mode by default: while the code is fixed at 123456 the
+    | server is for trying things out, and any number typed into the app
+    | should get in. Turning test mode off therefore closes registration too,
+    | which is the safe direction to fail in. Set it explicitly to override.
+    |
     */
 
-    'allow_registration' => (bool) env('OTP_ALLOW_REGISTRATION', false),
+    'allow_registration' => (bool) env('OTP_ALLOW_REGISTRATION', env('OTP_DEBUG', true)),
 
 ];
