@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\FiltersTrashed;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Customer;
@@ -9,11 +10,14 @@ use App\Models\Invoice;
 use Illuminate\Support\Str;
 use App\Services\CustomerWriter;
 use App\Services\ReportsService;
+use App\Support\BusinessScope;
 use App\Support\Rules;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
+    use FiltersTrashed;
+
     public function __construct(
         private ReportsService $reports,
         private CustomerWriter $writer,
@@ -26,6 +30,10 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $query = Customer::with('business');
+
+        // Deleting a customer on the handset only soft-deletes them here, so
+        // the record is still on file; it is just hidden by default.
+        $records = $this->applyRecordsFilter($query, $request);
 
         if ($businessUuid = $request->query('business')) {
             $query->whereHas('business', fn ($q) => $q->where('uuid', $businessUuid));
@@ -58,7 +66,7 @@ class CustomerController extends Controller
         return view('admin.customers.index', [
             'rows' => $rows,
             'businesses' => Business::orderBy('name')->get(),
-            'filters' => $request->only(['business', 'search']),
+            'filters' => $request->only(['business', 'search']) + ['records' => $records],
         ]);
     }
 
@@ -75,11 +83,14 @@ class CustomerController extends Controller
         return view('admin.customers.show', compact('customer', 'invoices'));
     }
 
-    public function create(Request $request)
+    public function create(Request $request, BusinessScope $scope)
     {
         return view('admin.customers.form', [
             'customer' => new Customer(),
-            'business' => null,
+            // Whichever business the panel is open on is the one being added
+            // to, so the select starts there rather than on the first name
+            // alphabetically.
+            'business' => $scope->current(),
             'businesses' => Business::orderBy('name')->get(),
         ]);
     }
@@ -144,6 +155,24 @@ class CustomerController extends Controller
             ->with('status', $billCount > 0
                 ? "{$name} removed from the list. Their {$billCount} ".\Str::plural('bill', $billCount).' stay on the books.'
                 : "{$name} removed from the list.");
+    }
+
+    /**
+     * Puts a soft-deleted customer back on the list.
+     *
+     * The row was never thrown away — a deletion on the handset only sets
+     * deleted_at here — so undoing one is just clearing that column. The
+     * handset picks the restored row up on its next pull.
+     */
+    public function restore(Customer $customer)
+    {
+        $this->authorize('update', $customer->business);
+
+        $customer->restore();
+
+        return redirect()
+            ->route('admin.customers.show', $customer)
+            ->with('status', "{$customer->name} restored to the customer list.");
     }
 
     /** One customer's ledger on a page built to be printed and handed over. */

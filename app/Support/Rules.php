@@ -75,6 +75,10 @@ class Rules
             'phone' => ['nullable', 'string', 'max:32'],
             'address' => ['nullable', 'string'],
             'gst_number' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:120'],
+            'state' => ['nullable', 'string', 'max:120'],
+            'post_code' => ['nullable', 'string', 'max:16'],
+            'email' => ['nullable', 'email', 'max:255'],
         ];
     }
 
@@ -101,7 +105,21 @@ class Rules
             'converted_from_uuid' => ['nullable', 'uuid'],
 
             'discount_type' => ['nullable', 'in:'.implode(',', [Invoice::DISCOUNT_NONE, Invoice::DISCOUNT_PERCENT, Invoice::DISCOUNT_AMOUNT])],
-            'discount_value' => ['nullable', 'numeric', 'min:0'],
+            // A discount that was asked for has to be worth something, and a
+            // percentage cannot take more than the whole bill. Both are
+            // enforced on the handset too; this is the copy that holds when
+            // the panel or an older app posts the row.
+            'discount_value' => [
+                'nullable', 'numeric', 'min:0',
+                Rule::when(
+                    fn ($input) => in_array($input->discount_type ?? null, [Invoice::DISCOUNT_PERCENT, Invoice::DISCOUNT_AMOUNT], true),
+                    ['gt:0'],
+                ),
+                Rule::when(
+                    fn ($input) => ($input->discount_type ?? null) === Invoice::DISCOUNT_PERCENT,
+                    ['max:100'],
+                ),
+            ],
             'round_off' => ['nullable', 'numeric'],
 
             'lines' => [$isUpdate ? 'sometimes' : 'required', 'array', 'min:1'],

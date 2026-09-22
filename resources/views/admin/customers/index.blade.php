@@ -31,6 +31,7 @@
                 @endforeach
             </select>
         </div>
+        @include('admin.partials.records-filter')
         <div class="actions">
             <button type="submit" class="btn">Filter</button>
             <a href="{{ route('admin.customers.index') }}" class="btn ghost">Clear</a>
@@ -47,13 +48,23 @@
                     <tbody>
                     @forelse($rows as $row)
                         @php $c = $row['customer']; @endphp
-                        <tr>
+                        <tr class="{{ $c->trashed() ? 'is-deleted' : '' }}">
                             <td>
                                 <div class="who-cell">
                                     <x-avatar :name="$c->name" small />
                                     <div class="lines">
-                                        <div><a href="{{ route('admin.customers.show', $c) }}" class="strong">{{ $c->name }}</a></div>
-                                        <div>{{ $c->business->name }}</div>
+                                        <div>
+                                            <a href="{{ route('admin.customers.show', $c) }}" class="strong">{{ $c->name }}</a>
+                                            @if($c->trashed())
+                                                <span class="pill deleted">Deleted</span>
+                                            @endif
+                                        </div>
+                                        <div>
+                                            {{ $c->business->name }}
+                                            @if($c->trashed())
+                                                · removed {{ $c->deleted_at->diffForHumans() }}
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -66,7 +77,13 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><div class="empty"><strong>No customers</strong>They arrive with the first sync or import.</div></td></tr>
+                        <tr><td colspan="6"><div class="empty">
+                            @if(($filters['records'] ?? 'live') === 'deleted')
+                                <strong>Nothing deleted</strong>Customers removed on a handset show up here.
+                            @else
+                                <strong>No customers</strong>They arrive with the first sync or import.
+                            @endif
+                        </div></td></tr>
                     @endforelse
                     </tbody>
                 </table>

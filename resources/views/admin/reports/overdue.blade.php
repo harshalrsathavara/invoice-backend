@@ -9,7 +9,11 @@
             <div class="eyebrow">Reports</div>
             <h1>Pending payments</h1>
             <div class="sub">
-                Unpaid bills older than {{ $minDays }} {{ Str::plural('day', $minDays) }}, oldest first, with a phone number beside each.
+                @if($minDays > 0)
+                    Bills with money still owed, older than {{ $minDays }} {{ Str::plural('day', $minDays) }}, oldest first, with a phone number beside each.
+                @else
+                    Every bill with money still owed, part paid or not, oldest first, with a phone number beside each.
+                @endif
                 Age is measured from the bill date — there are no payment terms in this system.
             </div>
         </div>
@@ -22,7 +26,7 @@
         <div class="field">
             <label for="days">Older than</label>
             <select id="days" name="days">
-                @foreach([0 => 'Any unpaid', 30 => '30 days', 60 => '60 days', 90 => '90 days', 180 => '180 days'] as $value => $label)
+                @foreach([0 => 'Any balance owing', 30 => '30 days', 60 => '60 days', 90 => '90 days', 180 => '180 days'] as $value => $label)
                     <option value="{{ $value }}" @selected($minDays === $value)>{{ $label }}</option>
                 @endforeach
             </select>
@@ -49,7 +53,10 @@
                 <div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 19H3z"/><path d="M12 9.5v4M12 16.5h.01"/></svg></div>
             </div>
             <div class="value">{{ Money::rupees($total) }}</div>
-            <div class="foot">{{ $rows->count() }} {{ Str::plural('bill', $rows->count()) }} over {{ $minDays }} {{ Str::plural('day', $minDays) }} old</div>
+            <div class="foot">
+                {{ $rows->count() }} {{ Str::plural('bill', $rows->count()) }}
+                @if($minDays > 0) over {{ $minDays }} {{ Str::plural('day', $minDays) }} old @else still owing @endif
+            </div>
         </div>
         @if($rows->isNotEmpty())
             <div class="kpi amber">
@@ -112,7 +119,7 @@
                             <td><x-status-pill :status="$invoice->status" /></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7"><div class="empty"><strong>Nothing to chase</strong>No unpaid bill is older than {{ $minDays }} {{ Str::plural('day', $minDays) }}.</div></td></tr>
+                        <tr><td colspan="7"><div class="empty"><strong>Nothing to chase</strong>@if($minDays > 0) No bill with a balance is older than {{ $minDays }} {{ Str::plural('day', $minDays) }}. @else Every bill has been paid in full. @endif</div></td></tr>
                     @endforelse
                     </tbody>
                 </table>

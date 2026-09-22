@@ -40,13 +40,27 @@
                     <span class="hint">Totals at a glance</span>
                 </span>
             </a>
-            <a href="{{ route('admin.businesses.index') }}" class="{{ request()->routeIs('admin.businesses.*') ? 'on' : '' }}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9.5 21v-5h5v5"/><path d="M9 9h.01M15 9h.01M9 12.5h.01M15 12.5h.01"/></svg>
-                <span class="lines">
-                    <span class="label">Businesses</span>
-                    <span class="hint">Your firms &amp; GST details</span>
-                </span>
-            </a>
+            {{-- On "All businesses" this is the list of firms, as it always
+                 was. With one firm chosen it becomes that firm's own profile:
+                 the list is a page about a choice that has already been made,
+                 and the switcher in the header is how it gets made. --}}
+            @if($currentBusiness ?? null)
+                <a href="{{ route('admin.businesses.show', $currentBusiness) }}" class="{{ request()->routeIs('admin.businesses.*') ? 'on' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9.5 21v-5h5v5"/><path d="M9 9h.01M15 9h.01M9 12.5h.01M15 12.5h.01"/></svg>
+                    <span class="lines">
+                        <span class="label">{{ $currentBusiness->name }}</span>
+                        <span class="hint">Profile, GST &amp; numbering</span>
+                    </span>
+                </a>
+            @else
+                <a href="{{ route('admin.businesses.index') }}" class="{{ request()->routeIs('admin.businesses.*') ? 'on' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9.5 21v-5h5v5"/><path d="M9 9h.01M15 9h.01M9 12.5h.01M15 12.5h.01"/></svg>
+                    <span class="lines">
+                        <span class="label">Businesses</span>
+                        <span class="hint">Your firms &amp; GST details</span>
+                    </span>
+                </a>
+            @endif
             <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'on' : '' }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
                 <span class="lines">
@@ -141,6 +155,21 @@
             <button type="button" class="icon-btn burger" data-nav-toggle aria-label="Show navigation" aria-controls="sidebar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
+
+            {{-- Which books are open. First in the bar because it qualifies
+                 every figure to the right of it and on the page below. --}}
+            <form method="POST" action="{{ route('admin.businesses.switch') }}"
+                  class="scope-picker {{ ($currentBusiness ?? null) ? 'is-one' : '' }}">
+                @csrf
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9.5 21v-5h5v5"/></svg>
+                <select name="business" onchange="this.form.submit()" aria-label="Which business the panel shows">
+                    <option value="">All businesses</option>
+                    @foreach(($scopeBusinesses ?? collect()) as $b)
+                        <option value="{{ $b->uuid }}" @selected(($currentBusiness ?? null)?->uuid === $b->uuid)>{{ $b->name }}</option>
+                    @endforeach
+                </select>
+                <noscript><button type="submit" class="btn small">Show</button></noscript>
+            </form>
 
             {{-- A real search: it runs the bill list's own filter. --}}
             <form method="GET" action="{{ route('admin.invoices.index') }}" class="searchbox" role="search">

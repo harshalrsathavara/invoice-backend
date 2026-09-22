@@ -61,9 +61,15 @@ class Invoice extends Model
         ];
     }
 
+    /**
+     * Deleting a business marks it and everything under it deleted together,
+     * so a deleted row's parent is deleted too. The panel is the one place
+     * those rows can still be read, and reading one with no business to name
+     * it was an error page rather than a record.
+     */
     public function business()
     {
-        return $this->belongsTo(Business::class);
+        return $this->belongsTo(Business::class)->withTrashed();
     }
 
     public function lines()

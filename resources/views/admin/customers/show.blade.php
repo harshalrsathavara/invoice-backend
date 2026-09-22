@@ -10,10 +10,23 @@
     <div class="page-head">
         <div>
             <div class="eyebrow">Customer · {{ $customer->business->name }}</div>
-            <h1>{{ $customer->name }}</h1>
-            <div class="sub">{{ $customer->phone ?: 'No phone recorded' }}</div>
+            <h1>{{ $customer->name }} @if($customer->trashed())<span class="pill deleted">Deleted</span>@endif</h1>
+            <div class="sub">
+                {{ $customer->phone ?: 'No phone recorded' }}
+                @if($customer->trashed())
+                    · removed from the list {{ $customer->deleted_at->diffForHumans() }}, kept on file here
+                @endif
+            </div>
         </div>
         <div class="head-actions">
+            @if($customer->trashed())
+                {{-- The row was never thrown away, so putting it back is a
+                     one-click undo. The handset picks it up on its next pull. --}}
+                <form method="POST" action="{{ route('admin.customers.restore', $customer) }}">
+                    @csrf
+                    <button type="submit" class="btn small">Restore to list</button>
+                </form>
+            @endif
             <a href="{{ route('admin.customers.statement', $customer) }}" class="btn ghost small">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M10 12h5M10 16h5"/></svg>
                 Statement
@@ -94,7 +107,10 @@
             <div class="body">
                 <dl class="kv">
                     <dt>Phone</dt><dd class="mono">{{ $customer->phone ?: '—' }}</dd>
-                    <dt>Address</dt><dd>{{ $customer->address ?: '—' }}</dd>
+                    <dt>Email</dt><dd>{{ $customer->email ?: '—' }}</dd>
+                    {{-- The parts joined back up, skipping whatever is blank. --}}
+                    <dt>Address</dt><dd>{{ $customer->full_address ?: '—' }}</dd>
+                    <dt>State</dt><dd>{{ $customer->state ?: '—' }}</dd>
                     <dt>GSTIN</dt><dd class="mono">{{ $customer->gst_number ?: '—' }}</dd>
                     <dt>Business</dt><dd><a href="{{ route('admin.businesses.show', $customer->business) }}">{{ $customer->business->name }}</a></dd>
                     <dt>UUID</dt><dd class="mono" style="font-size:12px;word-break:break-all">{{ $customer->uuid }}</dd>

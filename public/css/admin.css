@@ -297,6 +297,23 @@ main { min-width: 0; display: flex; flex-direction: column; }
   background: var(--surface); border: 1px solid var(--rule-strong); min-width: 0;
 }
 
+/* The business switcher: which firm's books the panel is open on. Reads as
+   part of the bar, not as a form control dropped into it. */
+.scope-picker { position: relative; display: flex; align-items: center; flex: none; }
+.scope-picker svg {
+  position: absolute; left: 11px; width: 15px; height: 15px;
+  color: var(--ink-3); pointer-events: none;
+}
+.scope-picker select {
+  height: 38px; max-width: 230px; padding: 0 12px 0 34px;
+  border-radius: var(--pill); background: var(--surface);
+  border: 1px solid var(--rule-strong); font-weight: 600;
+}
+/* Scoped to one firm is a state worth seeing from across the room: every
+   list below is hiding rows because of it. */
+.scope-picker.is-one select { border-color: var(--primary); color: var(--primary); }
+.scope-picker.is-one svg { color: var(--primary); }
+
 .bell { position: relative; }
 .bell .dot {
   position: absolute; top: 4px; right: 4px; min-width: 15px; height: 15px;
@@ -478,6 +495,9 @@ td.mono { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
 .pill.bill { background: var(--primary-soft); color: var(--primary); }
 .pill.quotation, .pill.challan { background: var(--sunk); color: var(--ink-2); }
 .pill.plain::before { display: none; }
+/* A row that is on file but no longer in the customer's list. */
+.pill.deleted { background: var(--st-crit-soft); color: var(--st-crit-ink); }
+tr.is-deleted td { opacity: .62; }
 
 /* ==========================================================================
    Forms
@@ -734,6 +754,7 @@ pre.json {
 
 @media (max-width: 560px) {
   .searchbox { display: none; }
+  .scope-picker select { max-width: 148px; }
   .kpis { grid-template-columns: minmax(0, 1fr); }
 }
 

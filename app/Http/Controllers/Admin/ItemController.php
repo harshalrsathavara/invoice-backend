@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\FiltersTrashed;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Invoice;
 use App\Models\Item;
+use App\Support\BusinessScope;
 use App\Support\Rules;
 use Illuminate\Http\Request;
 
@@ -16,9 +18,14 @@ use Illuminate\Http\Request;
  */
 class ItemController extends Controller
 {
+    use FiltersTrashed;
+
     public function index(Request $request)
     {
         $query = Item::with('business');
+
+        // An item deleted on a handset is soft-deleted here, not erased.
+        $records = $this->applyRecordsFilter($query, $request);
 
         if ($businessUuid = $request->query('business')) {
             $query->whereHas('business', fn ($q) => $q->where('uuid', $businessUuid));
@@ -52,15 +59,16 @@ class ItemController extends Controller
         return view('admin.items.index', [
             'rows' => $rows,
             'businesses' => Business::orderBy('name')->get(),
-            'filters' => $request->only(['business', 'search']),
+            'filters' => $request->only(['business', 'search']) + ['records' => $records],
         ]);
     }
 
-    public function create()
+    public function create(BusinessScope $scope)
     {
         return view('admin.items.form', [
             'item' => new Item(),
-            'business' => null,
+            // Starts on whichever business the panel is open on.
+            'business' => $scope->current(),
             'businesses' => Business::orderBy('name')->get(),
         ]);
     }
@@ -111,5 +119,20 @@ class ItemController extends Controller
         return redirect()
             ->route('admin.items.index', ['business' => $business->uuid])
             ->with('status', "{$name} removed from the catalogue. Bills that used it are untouched.");
+    }
+
+    /**
+     * Puts a soft-deleted catalogue entry back. Nothing was erased when it
+     * went — the handset picks the restored row up on its next pull.
+     */
+    public function restore(Item $item)
+    {
+        $this->authorize('update', $item->business);
+
+        $item->restore();
+
+        return redirect()
+            ->route('admin.items.index', ['business' => $item->business->uuid])
+            ->with('status', "{$item->name} restored to the catalogue.");
     }
 }

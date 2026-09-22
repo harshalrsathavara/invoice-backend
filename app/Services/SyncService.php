@@ -67,7 +67,10 @@ class SyncService
 
                     $result = match ($table) {
                         'businesses' => $this->applyBusiness($user, $row),
-                        'customers' => $this->applyScoped($user, Customer::class, $row, ['name', 'phone', 'address', 'gst_number']),
+                        'customers' => $this->applyScoped($user, Customer::class, $row, [
+                            'name', 'phone', 'address', 'gst_number',
+                            'city', 'state', 'post_code', 'email',
+                        ]),
                         'items' => $this->applyScoped($user, Item::class, $row, ['name', 'default_rate', 'hsn_code']),
                         'invoices' => $this->applyInvoice($user, $row),
                         'payments' => $this->applyPayment($user, $row),

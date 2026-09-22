@@ -24,12 +24,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
-    Route::middleware(['auth', 'admin'])->group(function () {
+    Route::middleware(['auth', 'admin', 'business.scope'])->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
 
         // ---- businesses ----
         // "create" is declared before "{business}", or it would be read as a uuid.
         Route::get('businesses', [BusinessController::class, 'index'])->name('businesses.index');
+        // The header switcher. A POST because it changes what every other
+        // page will show for the rest of the session.
+        Route::post('businesses/switch', [BusinessController::class, 'switchTo'])->name('businesses.switch');
         Route::get('businesses/create', [BusinessController::class, 'create'])->name('businesses.create');
         Route::post('businesses', [BusinessController::class, 'store'])->name('businesses.store');
         Route::get('businesses/{business}/edit', [BusinessController::class, 'edit'])->name('businesses.edit');
@@ -48,9 +51,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
         Route::post('invoices/{invoice}/void', [InvoiceController::class, 'void'])->name('invoices.void');
         Route::post('invoices/{invoice}/unvoid', [InvoiceController::class, 'unvoid'])->name('invoices.unvoid');
-        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        // A bill deleted on a handset is soft-deleted here; these two reach it.
+        Route::post('invoices/{invoice}/restore', [InvoiceController::class, 'restore'])->name('invoices.restore')->withTrashed();
+        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show')->withTrashed();
 
         Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
+        Route::post('invoices/{invoice}/settle', [PaymentController::class, 'settle'])->name('payments.settle');
         Route::delete('invoices/{invoice}/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
 
         // ---- customers ----
@@ -61,7 +67,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
         Route::get('customers/{customer}/statement', [CustomerController::class, 'statement'])->name('customers.statement');
-        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        // Soft-deleted customers are still on file and the panel is where they
+        // are looked at, so these two resolve trashed rows as well.
+        Route::post('customers/{customer}/restore', [CustomerController::class, 'restore'])->name('customers.restore')->withTrashed();
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show')->withTrashed();
 
         // ---- item catalogue ----
         Route::get('items', [ItemController::class, 'index'])->name('items.index');
@@ -70,6 +79,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('items/{item}/edit', [ItemController::class, 'edit'])->name('items.edit');
         Route::put('items/{item}', [ItemController::class, 'update'])->name('items.update');
         Route::delete('items/{item}', [ItemController::class, 'destroy'])->name('items.destroy');
+        // Soft-deleted catalogue entries are still on file, so this resolves them.
+        Route::post('items/{item}/restore', [ItemController::class, 'restore'])->name('items.restore')->withTrashed();
 
         // ---- owner accounts ----
         Route::get('users', [UserController::class, 'index'])->name('users.index');

@@ -56,6 +56,7 @@
             <label for="to">To</label>
             <input id="to" type="date" name="to" value="{{ $filters['to'] ?? '' }}">
         </div>
+        @include('admin.partials.records-filter')
         <div class="actions">
             <button type="submit" class="btn">Filter</button>
             <a href="{{ route('admin.invoices.index') }}" class="btn ghost">Clear</a>
@@ -74,8 +75,11 @@
                     </thead>
                     <tbody>
                     @forelse($invoices as $invoice)
-                        <tr>
-                            <td class="mono"><a href="{{ route('admin.invoices.show', $invoice) }}">{{ $invoice->display_no }}</a></td>
+                        <tr class="{{ $invoice->trashed() ? 'is-deleted' : '' }}">
+                            <td class="mono">
+                                <a href="{{ route('admin.invoices.show', $invoice) }}">{{ $invoice->display_no }}</a>
+                                @if($invoice->trashed())<span class="pill deleted">Deleted</span>@endif
+                            </td>
                             <td><span class="pill {{ $invoice->doc_type }}">{{ ucfirst($invoice->doc_type) }}</span></td>
                             <td>
                                 {{ $invoice->customer_name }}

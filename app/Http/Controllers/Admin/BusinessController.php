@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Payment;
 use App\Models\User;
+use App\Http\Middleware\ScopeToBusiness;
 use App\Services\BusinessImages;
 use App\Services\ReportsService;
 use App\Support\Rules;
@@ -27,6 +28,51 @@ class BusinessController extends Controller
             ->get();
 
         return view('admin.businesses.index', compact('businesses'));
+    }
+
+    /**
+     * Opens the panel on one business, or on all of them.
+     *
+     * The choice is kept for the session, so every list, report and figure
+     * that follows is about that firm until it is changed again.
+     */
+    public function switchTo(Request $request)
+    {
+        $request->validate(['business' => ['nullable', 'string', 'max:64']]);
+
+        $uuid = trim((string) $request->input('business'));
+        $business = $uuid === '' ? null : Business::where('uuid', $uuid)->first();
+
+        if ($business) {
+            $request->session()->put(ScopeToBusiness::KEY, $business->uuid);
+        } else {
+            $request->session()->forget(ScopeToBusiness::KEY);
+        }
+
+        return redirect($this->pageWithoutBusinessFilter($request))
+            ->with('status', $business
+                ? "Now showing {$business->name}. Every list and report below is about this business until you switch again."
+                : 'Now showing all businesses.');
+    }
+
+    /**
+     * Where to land after switching: the page they were on, minus any
+     * `business` already pinned to its URL — that parameter would otherwise
+     * out-argue the choice just made — and minus the page number, which
+     * belongs to a list that is about to be a different length.
+     */
+    private function pageWithoutBusinessFilter(Request $request): string
+    {
+        $previous = url()->previous();
+        $parts = parse_url($previous);
+        $path = ($parts['scheme'] ?? 'http').'://'.($parts['host'] ?? $request->getHost())
+            .(isset($parts['port']) ? ':'.$parts['port'] : '')
+            .($parts['path'] ?? '/');
+
+        parse_str($parts['query'] ?? '', $query);
+        unset($query['business'], $query['page']);
+
+        return $query === [] ? $path : $path.'?'.http_build_query($query);
     }
 
     public function show(Business $business)

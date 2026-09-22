@@ -191,6 +191,53 @@ class AdminWritesTest extends TestCase
         ]);
     }
 
+    /**
+     * The postal address is stored in parts, so the panel has to accept all
+     * of them — the form rendering is not the same as the form saving.
+     */
+    public function test_a_customers_address_parts_and_email_round_trip(): void
+    {
+        $this->post(route('admin.customers.store'), [
+            'business_uuid' => $this->business->uuid,
+            'name' => 'Gayatri Engineering',
+            'phone' => '9825044551',
+            'email' => 'accounts@gayatri.example',
+            'address' => '14 Station Road',
+            'city' => 'Mehsana',
+            'state' => 'Gujarat',
+            'post_code' => '384002',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('customers', [
+            'name' => 'Gayatri Engineering',
+            'email' => 'accounts@gayatri.example',
+            'city' => 'Mehsana',
+            'state' => 'Gujarat',
+            'post_code' => '384002',
+        ]);
+
+        $customer = \App\Models\Customer::where('name', 'Gayatri Engineering')->firstOrFail();
+
+        $this->assertSame('14 Station Road, Mehsana, Gujarat, 384002', $customer->full_address);
+
+        // And the whole address reaches the screen that shows it.
+        $this->get(route('admin.customers.show', $customer))
+            ->assertOk()
+            ->assertSee('14 Station Road, Mehsana, Gujarat, 384002')
+            ->assertSee('accounts@gayatri.example');
+    }
+
+    public function test_a_malformed_customer_email_is_rejected(): void
+    {
+        $this->post(route('admin.customers.store'), [
+            'business_uuid' => $this->business->uuid,
+            'name' => 'Bad Email Co',
+            'email' => 'not-an-address',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('customers', ['name' => 'Bad Email Co']);
+    }
+
     public function test_renaming_a_customer_also_renames_them_on_their_bills(): void
     {
         $customer = Customer::factory()->for($this->business)->create(['name' => 'Old Name']);
@@ -408,6 +455,40 @@ class AdminWritesTest extends TestCase
         $this->assertSame('Unpaid', $invoice->fresh()->status);
     }
 
+    public function test_marking_a_bill_paid_records_the_outstanding_balance(): void
+    {
+        $invoice = Invoice::factory()->for($this->business)->worth(10000)->create();
+        $this->post(route('admin.payments.store', $invoice), ['amount' => 4000]);
+
+        $this->post(route('admin.payments.settle', $invoice))->assertRedirect();
+
+        $fresh = $invoice->fresh();
+        $this->assertSame('Paid', $fresh->status);
+        $this->assertEqualsWithDelta(10000.0, (float) $fresh->paid_amount, 0.01);
+        // The one-click receipt covers the balance only, not the whole bill.
+        $this->assertCount(2, $fresh->payments);
+        $this->assertEqualsWithDelta(6000.0, (float) $fresh->payments->last()->amount, 0.01);
+    }
+
+    public function test_a_bill_already_paid_cannot_be_marked_paid_again(): void
+    {
+        $invoice = Invoice::factory()->for($this->business)->worth(2500)->create();
+        $this->post(route('admin.payments.store', $invoice), ['amount' => 2500]);
+
+        $this->post(route('admin.payments.settle', $invoice))->assertSessionHasErrors('amount');
+
+        $this->assertCount(1, $invoice->fresh()->payments);
+    }
+
+    public function test_a_quotation_cannot_be_marked_paid(): void
+    {
+        $quotation = Invoice::factory()->for($this->business)->worth(5000)->create(['doc_type' => 'quotation']);
+
+        $this->post(route('admin.payments.settle', $quotation))->assertSessionHasErrors('amount');
+
+        $this->assertCount(0, $quotation->fresh()->payments);
+    }
+
     public function test_a_quotation_does_not_take_payments(): void
     {
         $quotation = Invoice::factory()->for($this->business)->worth(5000)->create(['doc_type' => 'quotation']);
@@ -435,6 +516,28 @@ class AdminWritesTest extends TestCase
         $this->get(route('admin.reports.gst'))->assertOk();
         $this->get(route('admin.reports.payments'))->assertOk();
         $this->get(route('admin.reports.overdue'))->assertOk()->assertSee('Pending payments');
+    }
+
+    public function test_the_chase_list_shows_part_paid_bills_by_default(): void
+    {
+        $partly = Invoice::factory()->for($this->business)->worth(9000)->create([
+            'customer_name' => 'Half Paid Co',
+            'date' => now()->subDays(3),
+        ]);
+        $this->post(route('admin.payments.store', $partly), ['amount' => 5000]);
+
+        $settled = Invoice::factory()->for($this->business)->worth(4000)->create([
+            'customer_name' => 'Settled Co',
+            'date' => now()->subDays(3),
+        ]);
+        $this->post(route('admin.payments.store', $settled), ['amount' => 4000]);
+
+        // A bill part paid this week is the one most likely to be chased, and
+        // the page named after chasing used to start 60 days back.
+        $this->get(route('admin.reports.overdue'))
+            ->assertOk()
+            ->assertSee('Half Paid Co')
+            ->assertDontSee('Settled Co');
     }
 
     public function test_the_chase_list_only_shows_bills_past_the_age_asked_for(): void

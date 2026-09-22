@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\BusinessScope;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,7 +13,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One per request: the middleware sets which business the panel is
+        // open on, and controllers resolved later read the same object.
+        $this->app->scoped(BusinessScope::class);
     }
 
     /**

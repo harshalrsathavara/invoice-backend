@@ -170,6 +170,49 @@ class SyncTest extends TestCase
         $this->assertSoftDeleted('customers', ['id' => $customer->id]);
     }
 
+    /**
+     * The other half of a soft delete: an admin putting a row back has to
+     * reach the handset that deleted it, or the panel's Restore button would
+     * only ever be true on the server.
+     *
+     * Time is moved forward rather than timestamps being written by hand,
+     * because what is under test is whether `restore()` bumps `updated_at`
+     * past the handset's cursor on its own.
+     */
+    public function test_restoring_a_deleted_row_in_the_panel_reaches_the_handset(): void
+    {
+        $customer = Customer::factory()->for($this->business)->create(['name' => 'Mahesh Traders']);
+
+        $this->travel(1)->minutes();
+
+        $this->push(['customers' => [[
+            'uuid' => $customer->uuid,
+            'business_uuid' => $this->business->uuid,
+            'name' => $customer->name,
+            'updated_at' => now()->toIso8601String(),
+            'deleted_at' => now()->toIso8601String(),
+        ]]])->assertOk();
+
+        $this->assertSoftDeleted('customers', ['id' => $customer->id]);
+
+        // Where the handset's cursor sits: it has seen the deletion.
+        $cursor = now();
+
+        $this->travel(1)->minutes();
+        $customer->fresh()->restore();
+
+        $row = collect(
+            $this->getJson('/api/v1/sync/pull?since='.urlencode($cursor->toIso8601String()).'&device_uuid='.$this->device->uuid)
+                ->assertOk()
+                ->json('changes.customers')
+        )->firstWhere('uuid', $customer->uuid);
+
+        $this->assertNotNull($row, 'A restored customer should come back down on the next pull.');
+        $this->assertNull($row['deleted_at'] ?? null, 'It should arrive alive, not still tombstoned.');
+
+        $this->travelBack();
+    }
+
     public function test_a_payment_lands_against_its_bill_and_moves_the_balance(): void
     {
         $invoice = Invoice::factory()->for($this->business)->worth(20000)->create();

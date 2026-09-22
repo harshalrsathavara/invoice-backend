@@ -37,7 +37,7 @@
                     @else
                         <x-field name="business_uuid" label="Business" type="select" required span>
                             @foreach($businesses as $b)
-                                <option value="{{ $b->uuid }}" @selected(old('business_uuid') === $b->uuid)>{{ $b->name }}</option>
+                                <option value="{{ $b->uuid }}" @selected(old('business_uuid', $business?->uuid) === $b->uuid)>{{ $b->name }}</option>
                             @endforeach
                         </x-field>
                     @endif
@@ -45,8 +45,15 @@
                     <x-field name="name" label="Name" :value="$customer->name" required span />
                     <x-field name="phone" label="Phone" :value="$customer->phone"
                              help="Shown beside them on the chase list." />
+                    <x-field name="email" label="Email" :value="$customer->email" type="email"
+                             help="For emailing a copy of the bill." />
                     <x-field name="gst_number" label="GSTIN" :value="$customer->gst_number" />
-                    <x-field name="address" label="Address" :value="$customer->address" type="textarea" span />
+                    <x-field name="address" label="Address" :value="$customer->address" type="textarea" span
+                             help="Street or area. The rest of the address goes below." />
+                    <x-field name="city" label="City" :value="$customer->city" />
+                    <x-field name="post_code" label="Post code" :value="$customer->post_code" />
+                    <x-field name="state" label="State" :value="$customer->state"
+                             help="Place of supply on a GST bill." span />
                 </div>
             </div>
             <div class="form-actions">

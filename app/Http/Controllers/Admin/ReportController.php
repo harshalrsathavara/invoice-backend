@@ -138,7 +138,11 @@ class ReportController extends Controller
             'days' => ['nullable', 'integer', 'min:0', 'max:3650'],
         ]);
 
-        $minDays = (int) $request->query('days', 60);
+        // Everything still owed, unless an age is asked for. It used to
+        // default to 60 days, which meant a bill part paid this week — the
+        // one most likely to be chased next — was missing from the page
+        // named after exactly that.
+        $minDays = (int) $request->query('days', 0);
         $today = CarbonImmutable::now()->startOfDay();
 
         $businesses = Business::orderBy('name')->get();

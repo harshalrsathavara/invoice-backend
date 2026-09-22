@@ -30,7 +30,7 @@
                     @else
                         <x-field name="business_uuid" label="Business" type="select" required span>
                             @foreach($businesses as $b)
-                                <option value="{{ $b->uuid }}" @selected(old('business_uuid') === $b->uuid)>{{ $b->name }}</option>
+                                <option value="{{ $b->uuid }}" @selected(old('business_uuid', $business?->uuid) === $b->uuid)>{{ $b->name }}</option>
                             @endforeach
                         </x-field>
                     @endif

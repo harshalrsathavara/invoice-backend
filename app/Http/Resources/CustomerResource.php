@@ -15,6 +15,10 @@ class CustomerResource extends JsonResource
             'phone' => $this->phone,
             'address' => $this->address,
             'gst_number' => $this->gst_number,
+            'city' => $this->city,
+            'state' => $this->state,
+            'post_code' => $this->post_code,
+            'email' => $this->email,
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }

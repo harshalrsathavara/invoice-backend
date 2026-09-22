@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\FiltersTrashed;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Invoice;
@@ -11,6 +12,8 @@ use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
+    use FiltersTrashed;
+
     public function __construct(
         private InvoiceWriter $writer,
     ) {}
@@ -19,6 +22,11 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $query = Invoice::with(['business', 'lines', 'taxes', 'payments']);
+
+        // A bill deleted on a handset is soft-deleted here, not erased — this
+        // is the only place it can still be read. Cancelling a bill is a
+        // different thing entirely and is shown by its Cancelled status.
+        $records = $this->applyRecordsFilter($query, $request);
 
         if ($businessUuid = $request->query('business')) {
             $query->whereHas('business', fn ($q) => $q->where('uuid', $businessUuid));
@@ -52,7 +60,7 @@ class InvoiceController extends Controller
         return view('admin.invoices.index', [
             'invoices' => $invoices,
             'businesses' => Business::orderBy('name')->get(),
-            'filters' => $request->only(['business', 'doc_type', 'status', 'search', 'from', 'to']),
+            'filters' => $request->only(['business', 'doc_type', 'status', 'search', 'from', 'to']) + ['records' => $records],
         ]);
     }
 
@@ -165,6 +173,25 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Puts back a bill deleted on a handset.
+     *
+     * Not the same as reinstating a cancelled one: a cancelled bill is still
+     * on the books and keeps its number, whereas a deleted one was hidden
+     * everywhere but here. Its lines, taxes and receipts were never removed,
+     * so restoring the header brings the whole document back.
+     */
+    public function restore(Invoice $invoice)
+    {
+        $this->authorize('update', $invoice);
+
+        $invoice->restore();
+
+        return redirect()
+            ->route('admin.invoices.show', $invoice)
+            ->with('status', "{$invoice->display_no} restored. Its lines and receipts came back with it.");
+    }
+
+    /**
      * The form posts lines and taxes as parallel arrays of text inputs, so the
      * blank rows a person leaves behind are dropped before validation rather
      * than being rejected back at them.
@@ -193,10 +220,19 @@ class InvoiceController extends Controller
             ->values()
             ->all();
 
+        // An empty discount box means there is no discount, whichever unit
+        // the select happens to be left on. Saying so here keeps the "a
+        // discount must be more than zero" rule for people who typed one.
+        $discountValue = $request->input('discount_value') === '' ? 0 : $request->input('discount_value');
+        $discountType = (float) $discountValue > 0
+            ? $request->input('discount_type')
+            : Invoice::DISCOUNT_NONE;
+
         $request->merge([
             'lines' => $lines,
             'taxes' => $taxes,
-            'discount_value' => $request->input('discount_value') === '' ? 0 : $request->input('discount_value'),
+            'discount_type' => $discountType,
+            'discount_value' => $discountValue,
             'round_off' => $request->input('round_off') === '' ? 0 : $request->input('round_off'),
         ]);
 

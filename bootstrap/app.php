@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureIsAdmin::class,
+            'business.scope' => \App\Http\Middleware\ScopeToBusiness::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('admin.login'));

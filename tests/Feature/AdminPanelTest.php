@@ -159,6 +159,89 @@ class AdminPanelTest extends TestCase
         $this->assertTrue($conflict->fresh()->reviewed);
     }
 
+    /**
+     * A customer deleted on a handset is soft-deleted here. The panel is the
+     * only place that record can still be seen, so these cover the switch
+     * that shows it and the one-click way back.
+     */
+    public function test_a_deleted_customer_is_hidden_from_the_list_but_kept_on_file(): void
+    {
+        $this->actingAs($this->admin);
+        $this->customer->delete();
+
+        $this->get(route('admin.customers.index'))
+            ->assertOk()
+            ->assertDontSee('Mahesh Traders');
+
+        $this->get(route('admin.customers.index', ['records' => 'deleted']))
+            ->assertOk()
+            ->assertSee('Mahesh Traders')
+            ->assertSee('Deleted');
+
+        $this->assertDatabaseHas('customers', ['id' => $this->customer->id]);
+    }
+
+    public function test_a_deleted_customer_can_still_be_opened_and_restored(): void
+    {
+        $this->actingAs($this->admin);
+        $this->customer->delete();
+
+        $this->get(route('admin.customers.show', $this->customer))
+            ->assertOk()
+            ->assertSee('Restore to list');
+
+        $this->post(route('admin.customers.restore', $this->customer))
+            ->assertRedirect();
+
+        $this->assertNull($this->customer->fresh()->deleted_at);
+        $this->get(route('admin.customers.index'))->assertOk()->assertSee('Mahesh Traders');
+    }
+
+    public function test_a_deleted_item_is_kept_on_file_and_can_be_restored(): void
+    {
+        $this->actingAs($this->admin);
+        $item = \App\Models\Item::factory()->for($this->business)->create(['name' => 'Bearing UCP 205']);
+        $item->delete();
+
+        $this->get(route('admin.items.index'))->assertOk()->assertDontSee('Bearing UCP 205');
+        $this->get(route('admin.items.index', ['records' => 'deleted']))
+            ->assertOk()
+            ->assertSee('Bearing UCP 205')
+            ->assertSee('Deleted');
+
+        $this->post(route('admin.items.restore', $item))->assertRedirect();
+
+        $this->assertNull($item->fresh()->deleted_at);
+    }
+
+    /**
+     * A bill deleted on a handset is a different thing from a cancelled one:
+     * cancelling keeps it on the books, deleting hides it everywhere but here.
+     */
+    public function test_a_deleted_bill_is_kept_on_file_and_can_be_restored(): void
+    {
+        $this->actingAs($this->admin);
+        $this->invoice->delete();
+
+        $this->get(route('admin.invoices.index'))
+            ->assertOk()
+            ->assertDontSee('RS/26-27/001');
+
+        $this->get(route('admin.invoices.index', ['records' => 'deleted']))
+            ->assertOk()
+            ->assertSee('RS/26-27/001');
+
+        $this->get(route('admin.invoices.show', $this->invoice))
+            ->assertOk()
+            ->assertSee('Restore it');
+
+        $this->post(route('admin.invoices.restore', $this->invoice))->assertRedirect();
+
+        $this->assertNull($this->invoice->fresh()->deleted_at);
+        // The bill's contents were never removed, so they come back with it.
+        $this->assertSame(1, $this->invoice->fresh()->payments()->count());
+    }
+
     public function test_revoking_a_device_removes_its_token(): void
     {
         $this->actingAs($this->admin);
@@ -170,5 +253,21 @@ class AdminPanelTest extends TestCase
         $this->post(route('admin.devices.revoke', $device))->assertRedirect();
 
         $this->assertSame(0, $this->admin->fresh()->tokens()->count());
+    }
+
+    public function test_the_deleted_lists_still_render_after_a_business_is_removed(): void
+    {
+        // Removing a business marks its customers, catalogue and documents
+        // deleted alongside it. Those rows are then readable only here, on
+        // the Deleted filter — where naming the business they belonged to
+        // used to be an error page, because the business was deleted too.
+        $this->actingAs($this->admin);
+        $this->delete(route('admin.businesses.destroy', $this->business));
+
+        $this->get(route('admin.invoices.index', ['records' => 'deleted']))
+            ->assertOk()
+            ->assertSee($this->business->name);
+        $this->get(route('admin.customers.index', ['records' => 'deleted']))->assertOk();
+        $this->get(route('admin.items.index', ['records' => 'deleted']))->assertOk();
     }
 }

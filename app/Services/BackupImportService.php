@@ -132,6 +132,10 @@ class BackupImportService
                     'phone' => $row['phone'] ?? '',
                     'address' => $row['address'] ?? '',
                     'gst_number' => $row['gst_number'] ?? '',
+                    'city' => $row['city'] ?? '',
+                    'state' => $row['state'] ?? '',
+                    'post_code' => $row['post_code'] ?? '',
+                    'email' => $row['email'] ?? '',
                 ]);
                 $uuidMap['customers'][(int) $row['id']] = $customer->uuid;
                 $counts['customers']++;

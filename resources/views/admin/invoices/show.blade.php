@@ -20,6 +20,20 @@
         </div>
     </div>
 
+    @if($invoice->trashed())
+        {{-- Deleted on a handset. Nothing was erased: the lines, taxes and
+             receipts are all still here, so this puts the whole bill back. --}}
+        <div class="notice warn">
+            <div>
+                Deleted {{ $invoice->deleted_at?->format('d M Y') }} on a handset. It is hidden everywhere but here, and its lines and receipts are intact.
+                <form method="POST" action="{{ route('admin.invoices.restore', $invoice) }}" class="inline-form" style="margin-left:8px">
+                    @csrf
+                    <button type="submit" class="btn ghost small">Restore it</button>
+                </form>
+            </div>
+        </div>
+    @endif
+
     @if($invoice->is_voided)
         <div class="notice warn">
             <div>
@@ -151,6 +165,17 @@
                             <button type="submit" class="btn">Record receipt</button>
                         </div>
                     </form>
+
+                    @if(round($invoice->balance, 2) > 0)
+                        {{-- The whole balance in one click, for a bill that was
+                             settled in cash on the spot and never needed a
+                             receipt typing out. --}}
+                        <form method="POST" action="{{ route('admin.payments.settle', $invoice) }}" class="form-actions"
+                              onsubmit="return confirm('Mark {{ $invoice->display_no }} as paid? A receipt for the full balance will be recorded against it.')">
+                            @csrf
+                            <button type="submit" class="btn ghost">Mark as paid</button>
+                        </form>
+                    @endif
                 @endif
             </section>
 

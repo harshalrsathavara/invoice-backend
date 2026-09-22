@@ -48,6 +48,48 @@ class PaymentController extends Controller
                 : 'Receipt recorded. '.Money::rupees($invoice->fresh()->balance).' still outstanding.');
     }
 
+    /**
+     * Settles a bill in one click: records a receipt for whatever is still
+     * outstanding, dated today.
+     *
+     * There is no "status" column to flip — a bill is paid when its receipts
+     * cover it, which is what keeps the ledger, the ageing report and the
+     * handsets all saying the same thing. So "mark as paid" writes the
+     * receipt that makes it true, rather than setting a flag that the next
+     * recalculation would contradict. The mode is recorded as "other"
+     * because this route does not know how the money arrived; edit or remove
+     * the receipt if it matters.
+     */
+    public function settle(Invoice $invoice)
+    {
+        $this->authorize('update', $invoice);
+
+        if ($invoice->doc_type !== Invoice::TYPE_BILL) {
+            return back()->withErrors(['amount' => 'Only bills take payments — a quotation or challan is not owed yet.']);
+        }
+
+        if ($invoice->is_voided) {
+            return back()->withErrors(['amount' => 'This bill is cancelled. Reinstate it before recording a receipt.']);
+        }
+
+        $balance = round($invoice->balance, 2);
+
+        if ($balance <= Invoice::EPSILON) {
+            return back()->withErrors(['amount' => 'Nothing is outstanding on this bill — it is already settled.']);
+        }
+
+        $this->writer->addPayment($invoice, [
+            'amount' => $balance,
+            'date' => now()->toDateString(),
+            'mode' => 'other',
+            'note' => 'Marked paid in the admin panel',
+        ]);
+
+        return redirect()
+            ->route('admin.invoices.show', $invoice)
+            ->with('status', "{$invoice->display_no} marked paid. A receipt for ".Money::rupees($balance).' was recorded against it.');
+    }
+
     public function destroy(Invoice $invoice, Payment $payment)
     {
         $this->authorize('update', $invoice);

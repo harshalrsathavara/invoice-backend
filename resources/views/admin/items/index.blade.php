@@ -32,6 +32,7 @@
                 @endforeach
             </select>
         </div>
+        @include('admin.partials.records-filter')
         <div class="actions">
             <button type="submit" class="btn">Filter</button>
             <a href="{{ route('admin.items.index') }}" class="btn ghost">Clear</a>
@@ -52,13 +53,19 @@
                     <tbody>
                     @forelse($rows as $row)
                         @php $item = $row['item']; @endphp
-                        <tr>
+                        <tr class="{{ $item->trashed() ? 'is-deleted' : '' }}">
                             <td>
                                 <div class="who-cell">
                                     <x-avatar :name="$item->name" small />
                                     <div class="lines">
-                                        <div><a href="{{ route('admin.items.edit', $item) }}" class="strong">{{ $item->name }}</a></div>
-                                        <div>{{ $item->business->name }}</div>
+                                        <div>
+                                            <a href="{{ route('admin.items.edit', $item) }}" class="strong">{{ $item->name }}</a>
+                                            @if($item->trashed())<span class="pill deleted">Deleted</span>@endif
+                                        </div>
+                                        <div>
+                                            {{ $item->business->name }}
+                                            @if($item->trashed()) · removed {{ $item->deleted_at->diffForHumans() }}@endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -69,10 +76,25 @@
                             </td>
                             <td class="num muted">{{ $row['times'] ?: '—' }}</td>
                             <td class="num strong">{{ $row['earned'] > 0 ? Money::rupees($row['earned']) : '—' }}</td>
-                            <td class="num"><a href="{{ route('admin.items.edit', $item) }}" class="btn ghost small">Edit</a></td>
+                            <td class="num">
+                                @if($item->trashed())
+                                    <form method="POST" action="{{ route('admin.items.restore', $item) }}">
+                                        @csrf
+                                        <button type="submit" class="btn ghost small">Restore</button>
+                                    </form>
+                                @else
+                                    <a href="{{ route('admin.items.edit', $item) }}" class="btn ghost small">Edit</a>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7"><div class="empty"><strong>Nothing in the catalogue</strong>Entries appear here the first time a line is typed onto a bill, or add one yourself.</div></td></tr>
+                        <tr><td colspan="7"><div class="empty">
+                            @if(($filters['records'] ?? 'live') === 'deleted')
+                                <strong>Nothing deleted</strong>Catalogue entries removed on a handset show up here.
+                            @else
+                                <strong>Nothing in the catalogue</strong>Entries appear here the first time a line is typed onto a bill, or add one yourself.
+                            @endif
+                        </div></td></tr>
                     @endforelse
                     </tbody>
                 </table>

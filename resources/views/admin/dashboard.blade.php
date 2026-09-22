@@ -36,8 +36,14 @@
     <div class="page-head">
         <div>
             <div class="eyebrow">Overview</div>
-            <h1>Everything, as it stands</h1>
-            <div class="sub">Across {{ $businesses->count() }} {{ Str::plural('business', $businesses->count()) }} · figures computed from the bills themselves</div>
+            <h1>{{ ($currentBusiness ?? null) ? $currentBusiness->name : 'Everything, as it stands' }}</h1>
+            <div class="sub">
+                @if($currentBusiness ?? null)
+                    This business only · figures computed from the bills themselves
+                @else
+                    Across {{ $businesses->count() }} {{ Str::plural('business', $businesses->count()) }} · figures computed from the bills themselves
+                @endif
+            </div>
         </div>
         <div class="muted" style="font-size:12.5px">{{ now()->format('D d M Y, H:i') }}</div>
     </div>
