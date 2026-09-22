@@ -49,6 +49,17 @@ To see the panel with data in it before a phone has ever synced:
 php artisan db:seed --class=DemoSeeder   # admin@example.com / password
 ```
 
+That seeds **three businesses** — a job-work shop, a timber merchant and an
+electrical contractor — each with a few months of bills behind it, settled,
+part settled and untouched, plus a quotation, a challan and one cancelled
+bill. Enough to judge the dashboard, the reports and the business switcher.
+
+It is keyed on each firm's bill prefix and skips any business that already
+has documents, so it is safe to run repeatedly. On Render it runs on every
+boot, behind `SEED_DEMO=true` — the free plan's SQLite file is wiped on each
+redeploy, so the demo data has to be laid down again each time. Set
+`SEED_DEMO` to `false` once the instance holds real books.
+
 Tests run against SQLite in memory and need no database:
 
 ```bash

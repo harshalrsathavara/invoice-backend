@@ -57,6 +57,11 @@ services:
         value: stderr
       - key: LOG_LEVEL
         value: info
+      # Three demo businesses with bills, seeded on every boot. It skips any
+      # business that already has documents, so it is safe to leave on — but
+      # set it to false once this instance holds real books.
+      - key: SEED_DEMO
+        value: "true"
       # Testing: SQLite inside the container (resets on every restart/sleep).
       # For real data switch DB_CONNECTION to mysql and set DB_HOST, DB_PORT,
       # DB_DATABASE, DB_USERNAME, DB_PASSWORD and MYSQL_ATTR_SSL_CA.

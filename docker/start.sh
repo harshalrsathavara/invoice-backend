@@ -24,6 +24,16 @@ if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
         --password="$ADMIN_PASSWORD" \
         ${ADMIN_PHONE:+--phone="$ADMIN_PHONE"}
 fi
+
+# Demo data: three businesses with a few months of bills behind them. Keyed
+# on the bill prefix, so a boot against a database that already has them
+# changes nothing — but still behind a switch, because seeding on every
+# deploy is not something a real ledger should have on by accident. Turn
+# SEED_DEMO off once actual books are on here.
+if [ "$SEED_DEMO" = "true" ]; then
+    php artisan db:seed --class=DemoSeeder --force --no-interaction
+fi
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
