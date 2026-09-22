@@ -144,7 +144,7 @@ class OtpController extends Controller
             // account signs in by phone.
             $user = User::create([
                 'name' => 'Owner '.$phone,
-                'email' => 'otp-'.Str::lower(Str::random(12)).'@invoice.local',
+                'email' => 'otp-'.Str::lower(Str::random(12)).User::PLACEHOLDER_EMAIL_DOMAIN,
                 'phone' => $phone,
                 'password' => Str::random(40),
             ]);
@@ -170,7 +170,10 @@ class OtpController extends Controller
             'token' => $token,
             'user' => [
                 'name' => $user->name,
-                'email' => $user->email,
+                // Null rather than the stand-in address, so the handset never
+                // offers it as the owner's email — it was being prefilled
+                // into the business profile and printed on bills.
+                'email' => $user->realEmail(),
                 'phone' => $user->phone,
                 'is_admin' => $user->is_admin,
             ],

@@ -75,7 +75,10 @@ class AuthController extends Controller
         return response()->json([
             'user' => [
                 'name' => $user->name,
-                'email' => $user->email,
+                // An account that registered by phone has a stand-in address,
+                // never a real one. Same rule as sign-in: it is not an email
+                // and is not offered as one.
+                'email' => $user->realEmail(),
                 'phone' => $user->phone,
                 'is_admin' => $user->is_admin,
             ],

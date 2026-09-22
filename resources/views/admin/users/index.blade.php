@@ -36,7 +36,10 @@
                                             <a href="{{ route('admin.users.edit', $user) }}" class="strong">{{ $user->name }}</a>
                                             @if($user->is(auth()->user()))<span class="muted" style="font-size:12px"> · you</span>@endif
                                         </div>
-                                        <div>{{ $user->email }}{{ $user->phone ? ' · '.$user->phone : '' }}</div>
+                                        {{-- An account that registered from a handset has a
+                                             stand-in address; showing it suggests somewhere
+                                             to write that does not exist. --}}
+                                        <div>{{ $user->realEmail() ?? 'Signs in by phone' }}{{ $user->phone ? ' · '.$user->phone : '' }}</div>
                                     </div>
                                 </div>
                             </td>

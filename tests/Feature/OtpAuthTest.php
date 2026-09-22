@@ -182,6 +182,49 @@ class OtpAuthTest extends TestCase
         $this->assertDatabaseHas('users', ['phone' => '+919000000000']);
     }
 
+    public function test_a_number_that_registers_is_never_given_an_email(): void
+    {
+        // The users table needs a unique email, so registering by phone gets
+        // a stand-in nobody can write to. It must not come back as the
+        // owner's address: the handset prefilled it into the business
+        // profile, from where it printed on every bill.
+        config()->set('otp.allow_registration', true);
+
+        $this->postJson('/api/v1/auth/otp/request', ['phone' => '+919000000000'])->assertOk();
+
+        $token = $this->postJson('/api/v1/auth/otp/verify', [
+            'phone' => '+919000000000',
+            'code' => '123456',
+            'device_name' => 'Nord',
+        ])->assertOk()
+            ->assertJsonPath('user.email', null)
+            ->assertJsonPath('user.phone', '+919000000000')
+            ->json('token');
+
+        $this->withToken($token)->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('user.email', null);
+
+        // The row still holds one, because the column demands it.
+        $user = User::where('phone', '+919000000000')->firstOrFail();
+        $this->assertStringEndsWith(User::PLACEHOLDER_EMAIL_DOMAIN, $user->email);
+        $this->assertTrue($user->hasPlaceholderEmail());
+        $this->assertNull($user->realEmail());
+    }
+
+    public function test_a_real_address_still_comes_back(): void
+    {
+        $this->owner(['email' => 'harshal@example.com']);
+
+        $this->postJson('/api/v1/auth/otp/request', ['phone' => self::PHONE])->assertOk();
+
+        $this->postJson('/api/v1/auth/otp/verify', [
+            'phone' => self::PHONE,
+            'code' => '123456',
+            'device_name' => 'Nord',
+        ])->assertOk()->assertJsonPath('user.email', 'harshal@example.com');
+    }
+
     public function test_the_code_is_emailed_to_the_account(): void
     {
         Mail::fake();
