@@ -10,11 +10,17 @@
     <div class="page-head">
         <div>
             <div class="eyebrow">Customer · {{ $customer->business->name }}</div>
-            <h1>{{ $customer->name }} @if($customer->trashed())<span class="pill deleted">Deleted</span>@endif</h1>
+            <h1>
+                {{ $customer->name }}
+                @if($customer->trashed())<span class="pill deleted">Deleted</span>@endif
+                @if(! $customer->is_active)<span class="pill deleted">Inactive</span>@endif
+            </h1>
             <div class="sub">
                 {{ $customer->phone ?: 'No phone recorded' }}
                 @if($customer->trashed())
                     · removed from the list {{ $customer->deleted_at->diffForHumans() }}, kept on file here
+                @elseif(! $customer->is_active)
+                    · not offered on new bills; everything already raised is untouched
                 @endif
             </div>
         </div>
@@ -25,6 +31,17 @@
                 <form method="POST" action="{{ route('admin.customers.restore', $customer) }}">
                     @csrf
                     <button type="submit" class="btn small">Restore to list</button>
+                </form>
+            @endif
+            @if(! $customer->trashed())
+                {{-- Put away rather than deleted: the name is on bills that
+                     are still owed, so the row stays either way. --}}
+                <form method="POST" action="{{ route('admin.customers.status', $customer) }}">
+                    @csrf
+                    <input type="hidden" name="is_active" value="{{ $customer->is_active ? 0 : 1 }}">
+                    <button type="submit" class="btn ghost small">
+                        {{ $customer->is_active ? 'Mark inactive' : 'Mark active' }}
+                    </button>
                 </form>
             @endif
             <a href="{{ route('admin.customers.statement', $customer) }}" class="btn ghost small">

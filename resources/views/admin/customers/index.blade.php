@@ -57,6 +57,8 @@
                                             <a href="{{ route('admin.customers.show', $c) }}" class="strong">{{ $c->name }}</a>
                                             @if($c->trashed())
                                                 <span class="pill deleted">Deleted</span>
+                                            @elseif(! $c->is_active)
+                                                <span class="pill deleted">Inactive</span>
                                             @endif
                                         </div>
                                         <div>

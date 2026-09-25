@@ -66,6 +66,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+        Route::post('customers/{customer}/status', [CustomerController::class, 'setStatus'])->name('customers.status');
         Route::get('customers/{customer}/statement', [CustomerController::class, 'statement'])->name('customers.statement');
         // Soft-deleted customers are still on file and the panel is where they
         // are looked at, so these two resolve trashed rows as well.

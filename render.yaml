@@ -62,13 +62,37 @@ services:
       # set it to false once this instance holds real books.
       - key: SEED_DEMO
         value: "true"
-      # Testing: SQLite inside the container (resets on every restart/sleep).
-      # For real data switch DB_CONNECTION to mysql and set DB_HOST, DB_PORT,
-      # DB_DATABASE, DB_USERNAME, DB_PASSWORD and MYSQL_ATTR_SSL_CA.
+      # The database lives outside the container, and has to. Render's disk is
+      # ephemeral: a SQLite file inside the image is wiped on every redeploy
+      # and every wake from sleep, taking the owner accounts with it — after
+      # which the same phone number signs in as a brand-new owner with no
+      # businesses, which is exactly what it looked like.
+      #
+      # These five are wired from the managed database declared at the foot of
+      # this file. To use MySQL somewhere else instead, set DB_CONNECTION to
+      # mysql and fill these in by hand, plus MYSQL_ATTR_SSL_CA if it needs TLS.
       - key: DB_CONNECTION
-        value: sqlite
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: invoice-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: invoice-db
+          property: port
       - key: DB_DATABASE
-        value: /var/www/html/database/database.sqlite
+        fromDatabase:
+          name: invoice-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: invoice-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: invoice-db
+          property: password
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_SECURE_COOKIE
@@ -90,3 +114,11 @@ services:
         sync: false
       - key: R2_SECRET_ACCESS_KEY
         sync: false
+
+# The books themselves. Sessions, cache and queues live here too, so this is
+# the one thing that must survive a deploy.
+databases:
+  - name: invoice-db
+    databaseName: invoice
+    user: invoice
+    plan: free

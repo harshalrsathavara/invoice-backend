@@ -79,6 +79,9 @@ class Rules
             'state' => ['nullable', 'string', 'max:120'],
             'post_code' => ['nullable', 'string', 'max:16'],
             'email' => ['nullable', 'email', 'max:255'],
+            // Put away rather than deleted: the name is on bills that are
+            // still owed, so the row stays and only drops out of the pickers.
+            'is_active' => ['nullable', 'boolean'],
         ];
     }
 

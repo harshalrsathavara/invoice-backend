@@ -1,9 +1,11 @@
 FROM php:8.2-apache
 
-# System libs + PHP extensions Laravel needs with MySQL
+# System libs + PHP extensions Laravel needs. Both database drivers are built
+# in: Render's own managed database is Postgres, and MySQL stays supported for
+# anyone pointing this at one.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip libzip-dev ca-certificates \
-    && docker-php-ext-install pdo_mysql zip bcmath opcache \
+    && apt-get install -y --no-install-recommends git unzip libzip-dev libpq-dev ca-certificates \
+    && docker-php-ext-install pdo_mysql pdo_pgsql zip bcmath opcache \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 

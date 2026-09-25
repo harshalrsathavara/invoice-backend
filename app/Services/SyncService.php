@@ -69,7 +69,7 @@ class SyncService
                         'businesses' => $this->applyBusiness($user, $row),
                         'customers' => $this->applyScoped($user, Customer::class, $row, [
                             'name', 'phone', 'address', 'gst_number',
-                            'city', 'state', 'post_code', 'email',
+                            'city', 'state', 'post_code', 'email', 'is_active',
                         ]),
                         'items' => $this->applyScoped($user, Item::class, $row, ['name', 'default_rate', 'hsn_code']),
                         'invoices' => $this->applyInvoice($user, $row),

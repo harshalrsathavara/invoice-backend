@@ -19,6 +19,7 @@ class CustomerResource extends JsonResource
             'state' => $this->state,
             'post_code' => $this->post_code,
             'email' => $this->email,
+            'is_active' => (bool) $this->is_active,
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }

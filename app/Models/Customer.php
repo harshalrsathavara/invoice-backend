@@ -20,8 +20,19 @@ class Customer extends Model
 
     protected $fillable = [
         'uuid', 'name', 'phone', 'address', 'gst_number',
-        'city', 'state', 'post_code', 'email',
+        'city', 'state', 'post_code', 'email', 'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return ['is_active' => 'boolean'];
+    }
+
+    /** Customers still being billed. */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 
     /**
      * The whole postal address on one line, skipping whatever is blank.

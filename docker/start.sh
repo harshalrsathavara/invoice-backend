@@ -13,7 +13,19 @@ if [ "$DB_CONNECTION" = "sqlite" ]; then
     chown www-data:www-data "$DB_FILE" "$(dirname "$DB_FILE")"
 fi
 
-php artisan migrate --force
+# The managed database may still be waking when the web service boots, and a
+# failed migration here would leave the app serving 500s against an empty
+# schema. Retry a few times, then fail loudly rather than carry on.
+attempt=1
+until php artisan migrate --force; do
+    if [ "$attempt" -ge 5 ]; then
+        echo "Database not reachable after $attempt attempts — giving up." >&2
+        exit 1
+    fi
+    echo "Database not ready (attempt $attempt) — retrying in 5s..."
+    attempt=$((attempt + 1))
+    sleep 5
+done
 
 # Free Render services have no shell, so the admin is created from env vars.
 # Safe on every boot: the command creates or updates the same account.

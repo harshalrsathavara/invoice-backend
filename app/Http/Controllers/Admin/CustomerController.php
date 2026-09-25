@@ -142,6 +142,28 @@ class CustomerController extends Controller
                 : "Saved {$customer->name}.");
     }
 
+    /**
+     * Puts a customer away, or brings them back.
+     *
+     * The alternative on offer used to be deletion, which is the wrong shape
+     * for somebody who has simply stopped ordering: their name is on bills
+     * that are still owed, in the ledger and in last year's GST figures, so
+     * the row has to stay. Inactive keeps every bit of that and only takes
+     * them out of the lists used to raise new ones.
+     */
+    public function setStatus(Request $request, Customer $customer)
+    {
+        $this->authorize('update', $customer->business);
+
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+
+        $customer->forceFill(['is_active' => $data['is_active']])->save();
+
+        return back()->with('status', $data['is_active']
+            ? "{$customer->name} is active again and back in the lists."
+            : "{$customer->name} is inactive. Their bills and ledger are untouched; they just will not be offered on a new bill.");
+    }
+
     public function destroy(Customer $customer)
     {
         $business = $customer->business;
