@@ -47,6 +47,7 @@ class InvoiceWriter
                 'discount_type' => $data['discount_type'] ?? Invoice::DISCOUNT_NONE,
                 'discount_value' => $data['discount_value'] ?? 0,
                 'round_off' => $data['round_off'] ?? 0,
+                'is_inter_state' => $data['is_inter_state'] ?? false,
                 'notes' => $data['notes'] ?? '',
                 'photo_path' => $data['photo_path'] ?? null,
                 'converted_from_uuid' => $data['converted_from_uuid'] ?? null,
@@ -86,6 +87,10 @@ class InvoiceWriter
             }
             if (array_key_exists('round_off', $data)) {
                 $invoice->round_off = $data['round_off'];
+            }
+            // False is a real answer here, so array_filter would eat it.
+            if (array_key_exists('is_inter_state', $data)) {
+                $invoice->is_inter_state = (bool) $data['is_inter_state'];
             }
 
             $invoice->save();
@@ -167,6 +172,7 @@ class InvoiceWriter
                 'particulars' => $line['particulars'],
                 'quantity' => $line['quantity'] ?? 0,
                 'rate' => $line['rate'] ?? 0,
+                'gst_rate' => $line['gst_rate'] ?? 0,
                 'position' => $line['position'] ?? $position,
             ]);
         }

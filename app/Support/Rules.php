@@ -52,6 +52,7 @@ class Rules
             'address' => ['nullable', 'string'],
             'mobile' => ['nullable', 'string', 'max:32'],
             'jurisdiction_text' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:120'],
             'gst_number' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'bank_details' => ['nullable', 'string'],
@@ -91,6 +92,7 @@ class Rules
             'uuid' => ['nullable', 'uuid'],
             'name' => [$item ? 'sometimes' : 'required', 'string', 'max:255'],
             'default_rate' => ['nullable', 'numeric', 'min:0'],
+            'gst_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'hsn_code' => ['nullable', 'string', 'max:16'],
         ];
     }
@@ -124,12 +126,18 @@ class Rules
                 ),
             ],
             'round_off' => ['nullable', 'numeric'],
+            // Inside the state a slab splits into CGST and SGST; outside it
+            // is one IGST row at the full rate.
+            'is_inter_state' => ['nullable', 'boolean'],
 
             'lines' => [$isUpdate ? 'sometimes' : 'required', 'array', 'min:1'],
             'lines.*.uuid' => ['nullable', 'uuid'],
             'lines.*.particulars' => ['required', 'string', 'max:255'],
             'lines.*.quantity' => ['required', 'numeric'],
             'lines.*.rate' => ['required', 'numeric'],
+            // The slab this line is charged at, copied from the item and
+            // editable on the bill. Zero means no GST on it.
+            'lines.*.gst_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'lines.*.position' => ['nullable', 'integer'],
 
             'taxes' => ['nullable', 'array'],

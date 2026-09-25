@@ -17,11 +17,11 @@ class Item extends Model
         'default_rate' => 0, 'hsn_code' => '',
     ];
 
-    protected $fillable = ['uuid', 'name', 'default_rate', 'hsn_code'];
+    protected $fillable = ['uuid', 'name', 'default_rate', 'hsn_code', 'gst_rate'];
 
     protected function casts(): array
     {
-        return ['default_rate' => 'float'];
+        return ['default_rate' => 'float', 'gst_rate' => 'float'];
     }
 
     /**

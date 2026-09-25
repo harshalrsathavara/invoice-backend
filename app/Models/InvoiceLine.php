@@ -10,13 +10,14 @@ class InvoiceLine extends Model
 {
     use HasFactory, HasUuid;
 
-    protected $fillable = ['uuid', 'particulars', 'quantity', 'rate', 'position'];
+    protected $fillable = ['uuid', 'particulars', 'quantity', 'rate', 'gst_rate', 'position'];
 
     protected function casts(): array
     {
         return [
             'quantity' => 'float',
             'rate' => 'float',
+            'gst_rate' => 'float',
             'position' => 'integer',
         ];
     }

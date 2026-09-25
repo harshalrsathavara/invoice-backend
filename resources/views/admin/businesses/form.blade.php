@@ -51,6 +51,10 @@
                     <x-field name="gst_number" label="GSTIN" :value="$business->gst_number" />
                     <x-field name="jurisdiction_text" label="Jurisdiction" :value="$business->jurisdiction_text"
                              placeholder="Subject to … Jurisdiction" />
+                    {{-- Compared with the customer's state to decide whether a
+                         bill carries CGST and SGST or a single IGST row. --}}
+                    <x-field name="state" label="State" :value="$business->state"
+                             placeholder="Gujarat" help="Decides CGST + SGST or IGST on a bill." />
                 </div>
             </div>
         </section>

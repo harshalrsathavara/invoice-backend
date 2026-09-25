@@ -20,7 +20,7 @@ class Business extends Model
     ];
 
     protected $fillable = [
-        'uuid', 'name', 'tagline', 'address', 'mobile', 'jurisdiction_text',
+        'uuid', 'name', 'tagline', 'address', 'mobile', 'jurisdiction_text', 'state',
         'gst_number', 'email', 'bank_details', 'logo_path', 'signature_path',
         'upi_id', 'next_bill_no', 'next_quote_no', 'next_challan_no',
         'bill_prefix', 'fy_reset', 'bill_fy', 'terms_text',

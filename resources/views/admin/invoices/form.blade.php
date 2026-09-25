@@ -13,6 +13,7 @@
             'particulars' => $l['particulars'] ?? $l->particulars,
             'quantity' => $l['quantity'] ?? $l->quantity,
             'rate' => $l['rate'] ?? $l->rate,
+            'gst_rate' => $l['gst_rate'] ?? ($l->gst_rate ?? 0),
         ])->all());
         $formTaxes = old('taxes', $taxes->map(fn ($t) => [
             'uuid' => $t->uuid, 'label' => $t->label, 'percent' => $t->percent,
@@ -105,7 +106,8 @@
                                     <th style="width:42%">Particulars</th>
                                     <th style="width:14%">Qty</th>
                                     <th style="width:19%">Rate</th>
-                                    <th style="width:19%" class="num">Amount</th>
+                                    <th style="width:9%" class="num">GST %</th>
+                                    <th style="width:16%" class="num">Amount</th>
                                     <th style="width:6%"></th>
                                 </tr>
                                 </thead>
@@ -119,6 +121,9 @@
                                         </td>
                                         <td><input type="number" step="any" name="lines[{{ $i }}][quantity]" value="{{ $line['quantity'] ?? '' }}" data-qty aria-label="Quantity"></td>
                                         <td><input type="number" step="any" name="lines[{{ $i }}][rate]" value="{{ $line['rate'] ?? '' }}" data-rate aria-label="Rate"></td>
+                                        {{-- The slab this line is charged at. Comes from the
+                                             catalogue item on the handset; typed here. --}}
+                                        <td><input type="number" step="any" min="0" max="100" name="lines[{{ $i }}][gst_rate]" value="{{ $line['gst_rate'] ?? '' }}" data-gst placeholder="0" aria-label="GST percent"></td>
                                         <td class="num"><span class="amount" data-amount>0.00</span></td>
                                         <td>
                                             <button type="button" class="row-drop" data-drop-line aria-label="Remove this line">
@@ -217,6 +222,7 @@
             </td>
             <td><input type="number" step="any" name="lines[__i__][quantity]" value="1" data-qty aria-label="Quantity"></td>
             <td><input type="number" step="any" name="lines[__i__][rate]" value="0" data-rate aria-label="Rate"></td>
+            <td><input type="number" step="any" min="0" max="100" name="lines[__i__][gst_rate]" value="" data-gst placeholder="0" aria-label="GST percent"></td>
             <td class="num"><span class="amount" data-amount>0.00</span></td>
             <td>
                 <button type="button" class="row-drop" data-drop-line aria-label="Remove this line">

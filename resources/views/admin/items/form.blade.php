@@ -40,6 +40,11 @@
                     <x-field name="default_rate" label="Default rate" :value="$item->default_rate" type="number"
                              help="Suggested on a new line. Bills already raised keep their own rate." />
                     <x-field name="hsn_code" label="HSN / SAC code" :value="$item->hsn_code" />
+                    {{-- Which slab this attracts follows from the HSN/SAC code
+                         above, so it is set here rather than guessed. Blank or
+                         zero means no GST is charged on it. --}}
+                    <x-field name="gst_rate" label="GST rate %" :value="$item->gst_rate" type="number"
+                             help="Charged on this item wherever it is billed." />
                 </div>
             </div>
             <div class="form-actions">

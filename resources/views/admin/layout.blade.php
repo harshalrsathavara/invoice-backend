@@ -291,14 +291,37 @@
             var discount = r2(Math.max(0, Math.min(raw, subtotal)));
             var taxable = r2(subtotal - discount);
 
+            // GST now comes from the lines' own rates. The bill-level rows
+            // are still honoured for a document raised before that, so this
+            // preview has to do whichever the saved bill will do.
             var tax = 0, labels = [];
-            taxesBox.querySelectorAll('[data-tax-row]').forEach(function (row) {
-                var percent = num(row.querySelector('[data-percent]'));
-                var label = row.querySelector('input[type="text"]').value.trim();
-                if (!label) return;
-                tax += r2(taxable * percent / 100);
-                labels.push(label + ' ' + percent + '%');
+            var lineGst = 0, slabs = {};
+            linesBody.querySelectorAll('[data-line-row]').forEach(function (row) {
+                var percent = num(row.querySelector('[data-gst]'));
+                if (percent <= 0) return;
+                var amount = r2(num(row.querySelector('[data-qty]')) * num(row.querySelector('[data-rate]')));
+                // The discount is shared out in proportion, exactly as the
+                // server and the handset do it.
+                var lineTaxable = subtotal > 0 ? amount - discount * (amount / subtotal) : 0;
+                slabs[percent] = (slabs[percent] || 0) + lineTaxable;
+                lineGst += 1;
             });
+
+            if (lineGst > 0) {
+                Object.keys(slabs).sort(function (a, b) { return a - b; }).forEach(function (rate) {
+                    var slabTax = r2(r2(slabs[rate]) * rate / 100);
+                    tax += slabTax;
+                    labels.push('GST ' + rate + '%');
+                });
+            } else {
+                taxesBox.querySelectorAll('[data-tax-row]').forEach(function (row) {
+                    var percent = num(row.querySelector('[data-percent]'));
+                    var label = row.querySelector('input[type="text"]').value.trim();
+                    if (!label) return;
+                    tax += r2(taxable * percent / 100);
+                    labels.push(label + ' ' + percent + '%');
+                });
+            }
             tax = r2(tax);
 
             var round = num(form.querySelector('[name="round_off"]'));

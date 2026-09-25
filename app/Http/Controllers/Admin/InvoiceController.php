@@ -205,6 +205,8 @@ class InvoiceController extends Controller
                 'particulars' => trim($line['particulars']),
                 'quantity' => $line['quantity'] === '' || $line['quantity'] === null ? 0 : $line['quantity'],
                 'rate' => $line['rate'] === '' || $line['rate'] === null ? 0 : $line['rate'],
+                // Blank means no GST on this line, not "leave it out".
+                'gst_rate' => ($line['gst_rate'] ?? '') === '' || $line['gst_rate'] === null ? 0 : $line['gst_rate'],
                 'position' => $i,
             ])
             ->values()

@@ -45,7 +45,7 @@ class Invoice extends Model
         'uuid', 'doc_type', 'bill_no', 'bill_ref', 'customer_name',
         'customer_uuid', 'date', 'amount_in_words', 'discount_type',
         'discount_value', 'round_off', 'notes', 'voided_at', 'void_reason',
-        'converted_from_uuid', 'photo_path',
+        'converted_from_uuid', 'photo_path', 'is_inter_state',
     ];
 
     protected function casts(): array
@@ -58,6 +58,7 @@ class Invoice extends Model
             'total' => 'float',
             'paid_amount' => 'float',
             'bill_no' => 'integer',
+            'is_inter_state' => 'boolean',
         ];
     }
 
@@ -146,8 +147,126 @@ class Invoice extends Model
         return round($this->taxable_amount * (float) $tax->percent / 100, 2);
     }
 
+    /**
+     * True once the lines carry their own GST rates, which is how every bill
+     * raised since per-item GST is taxed. Older ones had the rate typed once
+     * for the whole document and are still totalled that way.
+     */
+    public function getUsesLineGstAttribute(): bool
+    {
+        return $this->lines->contains(fn ($line) => (float) $line->gst_rate > 0);
+    }
+
+    /**
+     * A line's taxable value: its own amount less its share of the discount,
+     * apportioned by what it contributes. The discount was given against the
+     * bill as a whole, and a line at 18% must not swallow one earned by a
+     * line at 5%.
+     */
+    public function taxableForLine($line): float
+    {
+        $subtotal = $this->subtotal;
+        if ($subtotal <= 0) {
+            return 0.0;
+        }
+
+        $amount = (float) $line->quantity * (float) $line->rate;
+
+        return $amount - $this->discount_amount * ($amount / $subtotal);
+    }
+
+    /**
+     * The bill's GST slabs, smallest rate first: what was charged at each
+     * rate and the tax it came to. Empty on a bill taxed the old way.
+     *
+     * @return array<int, array{rate: float, taxable_value: float, tax: float}>
+     */
+    public function getGstSlabsAttribute(): array
+    {
+        if (! $this->uses_line_gst) {
+            return [];
+        }
+
+        $byRate = [];
+        foreach ($this->lines as $line) {
+            $rate = (float) $line->gst_rate;
+            if ($rate <= 0) {
+                continue;
+            }
+            $byRate[(string) $rate] = ($byRate[(string) $rate] ?? 0) + $this->taxableForLine($line);
+        }
+
+        $slabs = [];
+        foreach ($byRate as $rate => $taxable) {
+            $slabs[] = [
+                'rate' => (float) $rate,
+                'taxable_value' => round($taxable, 2),
+                'tax' => round(round($taxable, 2) * (float) $rate / 100, 2),
+            ];
+        }
+
+        usort($slabs, fn ($a, $b) => $a['rate'] <=> $b['rate']);
+
+        return $slabs;
+    }
+
+    /**
+     * The tax as it is shown and printed. Inside the state a slab splits into
+     * CGST and SGST at half each; outside it is a single IGST row at the full
+     * rate. Same money, different heads, filed separately.
+     *
+     * @return array<int, array{label: string, percent: float, taxable_value: float, amount: float}>
+     */
+    public function getTaxRowsAttribute(): array
+    {
+        if (! $this->uses_line_gst) {
+            return $this->taxes->map(fn (InvoiceTax $t) => [
+                'label' => $t->label,
+                'percent' => (float) $t->percent,
+                'taxable_value' => $this->taxable_amount,
+                'amount' => $this->taxAmountFor($t),
+            ])->all();
+        }
+
+        $rows = [];
+        foreach ($this->gst_slabs as $slab) {
+            if ($this->is_inter_state) {
+                $rows[] = [
+                    'label' => 'IGST',
+                    'percent' => $slab['rate'],
+                    'taxable_value' => $slab['taxable_value'],
+                    'amount' => $slab['tax'],
+                ];
+
+                continue;
+            }
+
+            // The halves are made to add back to the slab: 18% of 1,234.55 is
+            // 222.22, which does not halve cleanly.
+            $half = round($slab['tax'] / 2, 2);
+            $rows[] = [
+                'label' => 'CGST',
+                'percent' => $slab['rate'] / 2,
+                'taxable_value' => $slab['taxable_value'],
+                'amount' => $half,
+            ];
+            $rows[] = [
+                'label' => 'SGST',
+                'percent' => $slab['rate'] / 2,
+                'taxable_value' => $slab['taxable_value'],
+                'amount' => round($slab['tax'] - $half, 2),
+            ];
+        }
+
+        return $rows;
+    }
+
     public function getTotalTaxAttribute(): float
     {
+        if ($this->uses_line_gst) {
+            return round(array_sum(array_column($this->gst_slabs, 'tax')), 2);
+        }
+
         return round($this->taxes->sum(fn (InvoiceTax $t) => $this->taxAmountFor($t)), 2);
     }
 

@@ -85,9 +85,11 @@
                         <dt>Taxable amount</dt><dd><x-money :value="$invoice->taxable_amount" :symbol="false" /></dd>
                     @endif
 
-                    @foreach($invoice->taxes as $tax)
-                        <dt>{{ $tax->label }} @ {{ rtrim(rtrim(number_format($tax->percent, 3), '0'), '.') }}%</dt>
-                        <dd><x-money :value="$invoice->taxAmountFor($tax)" :symbol="false" /></dd>
+                    {{-- One row per slab when the lines carry their own rates,
+                         otherwise the single rate the bill was saved with. --}}
+                    @foreach($invoice->tax_rows as $tax)
+                        <dt>{{ $tax['label'] }} @ {{ rtrim(rtrim(number_format($tax['percent'], 3), '0'), '.') }}%</dt>
+                        <dd><x-money :value="$tax['amount']" :symbol="false" /></dd>
                     @endforeach
 
                     @if((float) $invoice->round_off !== 0.0)

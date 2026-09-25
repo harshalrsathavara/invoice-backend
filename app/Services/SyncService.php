@@ -71,7 +71,7 @@ class SyncService
                             'name', 'phone', 'address', 'gst_number',
                             'city', 'state', 'post_code', 'email', 'is_active',
                         ]),
-                        'items' => $this->applyScoped($user, Item::class, $row, ['name', 'default_rate', 'hsn_code']),
+                        'items' => $this->applyScoped($user, Item::class, $row, ['name', 'default_rate', 'hsn_code', 'gst_rate']),
                         'invoices' => $this->applyInvoice($user, $row),
                         'payments' => $this->applyPayment($user, $row),
                         default => null,
@@ -165,7 +165,7 @@ class SyncService
         $business = $existing ?? new Business(['uuid' => $row['uuid']]);
         $business->user_id = $user->id;
         $business->fill($this->only($row, [
-            'name', 'tagline', 'address', 'mobile', 'jurisdiction_text',
+            'name', 'tagline', 'address', 'mobile', 'jurisdiction_text', 'state',
             'gst_number', 'email', 'bank_details', 'upi_id', 'bill_prefix',
             'fy_reset', 'bill_fy', 'terms_text',
         ]));
