@@ -11,9 +11,16 @@ use App\Http\Controllers\Admin\LoginController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\DemoSeedController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
+
+// Fills an empty server with something to look at, and says what is already
+// there when it is opened again. No login: the point is to hand somebody a
+// link. It answers 404 unless SEED_DEMO is on, and it only ever creates what
+// is missing — see config/demo.php.
+Route::get('demo-seed', DemoSeedController::class)->name('demo.seed');
 
 Route::prefix('admin')->name('admin.')->group(function () {
 
