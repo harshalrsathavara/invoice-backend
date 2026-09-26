@@ -168,6 +168,44 @@ class GstTest extends TestCase
         $this->assertEqualsWithDelta(2230.0, (float) $invoice->fresh()->total, 0.001);
     }
 
+    public function test_the_gst_report_sees_a_bill_taxed_per_item(): void
+    {
+        // This is the one that files the return. While the report read the
+        // stored tax rows, a bill taxed from its items — which has none —
+        // was simply absent from it, and the figures filed would have been
+        // short by however much of the quarter used the new way.
+        $this->bill([
+            ['particulars' => 'Timber', 'quantity' => 1, 'rate' => 1000, 'gst_rate' => 5],
+            ['particulars' => 'Fitting', 'quantity' => 1, 'rate' => 1000, 'gst_rate' => 18],
+        ]);
+
+        $reports = app(\App\Services\ReportsService::class);
+        $bills = $this->business->invoices()->with(['lines', 'taxes'])->get();
+        $gst = $reports->gstSummary($bills);
+
+        // Two slabs, each split in half: CGST 2.5, CGST 9, SGST 2.5, SGST 9.
+        $this->assertCount(4, $gst);
+        $this->assertEqualsWithDelta(230.0, $gst->sum('tax_amount'), 0.001);
+
+        // The taxable value is per row, counted once per bill across slabs.
+        $this->assertEqualsWithDelta(2000.0, $reports->totalTaxableValue($bills), 0.001);
+        $this->assertEqualsWithDelta(230.0, $reports->totalTax($bills), 0.001);
+    }
+
+    public function test_an_exempt_line_is_not_taxable_value(): void
+    {
+        $this->bill([
+            ['particulars' => 'Taxed', 'quantity' => 1, 'rate' => 1000, 'gst_rate' => 18],
+            ['particulars' => 'Exempt', 'quantity' => 1, 'rate' => 500],
+        ]);
+
+        $reports = app(\App\Services\ReportsService::class);
+        $bills = $this->business->invoices()->with(['lines', 'taxes'])->get();
+
+        // 1,000, not 1,500: the exempt line is not value the tax was on.
+        $this->assertEqualsWithDelta(1000.0, $reports->totalTaxableValue($bills), 0.001);
+    }
+
     public function test_the_rate_is_stored_against_the_line(): void
     {
         // It has to survive the write, not just the sum: the bill is read

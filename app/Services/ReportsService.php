@@ -55,13 +55,16 @@ class ReportsService
         $byKey = [];
 
         foreach ($this->liveBills($bills) as $bill) {
-            foreach ($bill->taxes as $tax) {
-                $key = strtoupper($tax->label).'|'.(float) $tax->percent;
+            // Read through tax_rows, not the stored rows: a bill taxed per
+            // item has none of the latter, and its CGST 9% is charged on only
+            // the part of the bill sitting in the 18% slab, not on all of it.
+            foreach ($bill->tax_rows as $row) {
+                $key = strtoupper($row['label']).'|'.(float) $row['percent'];
                 $existing = $byKey[$key] ?? ['taxable' => 0.0, 'tax' => 0.0, 'count' => 0];
 
                 $byKey[$key] = [
-                    'taxable' => $existing['taxable'] + $bill->taxable_amount,
-                    'tax' => $existing['tax'] + $bill->taxAmountFor($tax),
+                    'taxable' => $existing['taxable'] + $row['taxable_value'],
+                    'tax' => $existing['tax'] + $row['amount'],
                     'count' => $existing['count'] + 1,
                 ];
             }
@@ -83,13 +86,23 @@ class ReportsService
             ->values();
     }
 
-    /** Value the tax was charged on, counting each taxed bill once. */
+    /**
+     * Value the tax was charged on, counting each taxed bill once.
+     *
+     * On a bill taxed per item this is its slabs added up, which deliberately
+     * leaves out any line carrying no GST — an exempt line is not taxable
+     * value, and a return would be wrong to include it.
+     */
     public function totalTaxableValue(Collection $bills): float
     {
         return round(
-            $this->liveBills($bills)
-                ->filter(fn (Invoice $b) => $b->taxes->isNotEmpty())
-                ->sum(fn (Invoice $b) => $b->taxable_amount),
+            $this->liveBills($bills)->sum(function (Invoice $bill) {
+                if ($bill->uses_line_gst) {
+                    return array_sum(array_column($bill->gst_slabs, 'taxable_value'));
+                }
+
+                return $bill->taxes->isEmpty() ? 0.0 : $bill->taxable_amount;
+            }),
             2
         );
     }

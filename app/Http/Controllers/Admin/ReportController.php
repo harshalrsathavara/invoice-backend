@@ -49,7 +49,7 @@ class ReportController extends Controller
         return view('admin.reports.gst', [
             'gst' => $this->reports->gstSummary($bills),
             'summary' => $this->reports->summary($bills),
-            'bills' => $bills->filter(fn (Invoice $b) => $b->taxes->isNotEmpty() && ! $b->is_voided)
+            'bills' => $bills->filter(fn (Invoice $b) => $b->tax_rows !== [] && ! $b->is_voided)
                 ->sortBy('date')->values(),
             'businesses' => $businesses,
             'business' => $business,
