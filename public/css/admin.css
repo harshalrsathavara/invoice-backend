@@ -511,12 +511,23 @@ tr.is-deleted td { opacity: .62; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { font-size: 10px; letter-spacing: .11em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
 .filters .actions { display: flex; gap: 10px; }
-input[type="text"], input[type="date"], input[type="email"], input[type="password"], select {
+/* Every text-ish input, number included. Leaving `number` out left the rate
+   and percent boxes with the browser's own styling — a thin grey box a
+   different height from the field beside it, which is what the bill editor
+   and the item form are mostly made of. */
+input[type="text"], input[type="number"], input[type="date"], input[type="email"],
+input[type="password"], input[type="tel"], input[type="search"], input[type="url"], select {
   font: inherit; font-size: 13.5px; height: 38px; padding: 0 12px; color: var(--ink);
   background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: var(--r-xs);
   min-width: 152px;
   transition: border-color .16s var(--ease), box-shadow .16s var(--ease), background .16s var(--ease);
 }
+
+/* The spinners are noise on a money column and steal width from a narrow
+   cell; the value is typed, not nudged. */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input::placeholder { color: var(--ink-3); }
 input:hover, select:hover { border-color: var(--ink-3); }
 input:focus, select:focus { outline: none; background: var(--surface); border-color: var(--primary); box-shadow: var(--ring); }
