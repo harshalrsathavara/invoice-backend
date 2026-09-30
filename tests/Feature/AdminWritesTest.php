@@ -360,14 +360,12 @@ class AdminWritesTest extends TestCase
         ])->assertSessionHasErrors('lines');
     }
 
-    public function test_editing_a_bill_keeps_its_number_and_its_receipts(): void
+    public function test_editing_an_unpaid_bill_keeps_its_number(): void
     {
         $invoice = Invoice::factory()->for($this->business)->worth(10000)->create([
             'customer_name' => 'Kiran Engineering',
             'bill_ref' => 'RS/26-27/007',
         ]);
-        $invoice->payments()->create(['date' => now(), 'amount' => 4000, 'mode' => 'cash']);
-        $invoice->load('payments')->recalculateTotals();
 
         $this->get(route('admin.invoices.edit', $invoice))->assertOk();
 
@@ -381,11 +379,51 @@ class AdminWritesTest extends TestCase
             'round_off' => 0,
         ])->assertRedirect(route('admin.invoices.show', $invoice));
 
-        $fresh = $invoice->fresh(['payments']);
+        $fresh = $invoice->fresh();
         $this->assertSame('RS/26-27/007', $fresh->bill_ref);
         $this->assertEqualsWithDelta(20000.0, (float) $fresh->total, 0.01);
-        $this->assertEqualsWithDelta(4000.0, (float) $fresh->paid_amount, 0.01);
-        $this->assertCount(1, $fresh->payments);
+    }
+
+    /**
+     * A receipt closes the bill to editing: the customer paid what the paper
+     * said, and the ledger and the GST return both quote those figures.
+     */
+    public function test_a_bill_with_a_receipt_cannot_be_edited(): void
+    {
+        $invoice = Invoice::factory()->for($this->business)->worth(10000)->create([
+            'customer_name' => 'Kiran Engineering',
+        ]);
+        $invoice->payments()->create(['date' => now(), 'amount' => 4000, 'mode' => 'cash']);
+        $invoice->load('payments')->recalculateTotals();
+
+        // Part paid is enough — it does not have to be settled in full.
+        $this->get(route('admin.invoices.edit', $invoice))
+            ->assertRedirect(route('admin.invoices.show', $invoice));
+
+        $this->put(route('admin.invoices.update', $invoice), [
+            'customer_name' => 'Someone Else',
+            'date' => $invoice->date->toDateString(),
+            'lines' => [['particulars' => 'Boring', 'quantity' => 1, 'rate' => 20000]],
+            'taxes' => [],
+            'discount_type' => 'none',
+            'discount_value' => 0,
+            'round_off' => 0,
+        ])->assertRedirect(route('admin.invoices.show', $invoice));
+
+        $fresh = $invoice->fresh();
+        $this->assertSame('Kiran Engineering', $fresh->customer_name);
+        $this->assertEqualsWithDelta(10000.0, (float) $fresh->total, 0.01);
+    }
+
+    public function test_removing_the_receipt_opens_the_bill_for_editing_again(): void
+    {
+        $invoice = Invoice::factory()->for($this->business)->worth(10000)->create();
+        $payment = $invoice->payments()->create(['date' => now(), 'amount' => 4000, 'mode' => 'cash']);
+        $invoice->load('payments')->recalculateTotals();
+
+        $this->delete(route('admin.payments.destroy', [$invoice, $payment]));
+
+        $this->get(route('admin.invoices.edit', $invoice->fresh()))->assertOk();
     }
 
     public function test_a_cancelled_document_cannot_be_edited_until_it_is_reinstated(): void

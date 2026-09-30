@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
+    private const LOCKED_MESSAGE = 'This bill has been paid against, so its figures are fixed. Remove the receipts first, or cancel it and raise a new one.';
+
     use FiltersTrashed;
 
     public function __construct(
@@ -118,6 +120,12 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
+        if ($invoice->is_locked) {
+            return redirect()
+                ->route('admin.invoices.show', $invoice)
+                ->withErrors(['customer_name' => self::LOCKED_MESSAGE]);
+        }
+
         $invoice->load(['lines', 'taxes']);
 
         return view('admin.invoices.form', [
@@ -139,6 +147,15 @@ class InvoiceController extends Controller
 
         if ($invoice->is_voided) {
             return back()->withErrors(['customer_name' => 'This document is cancelled. Reinstate it before editing.'])->withInput();
+        }
+
+        // Checked here as well as on the way in: the form could have been
+        // opened before the payment was recorded, or posted straight at this
+        // route.
+        if ($invoice->is_locked) {
+            return redirect()
+                ->route('admin.invoices.show', $invoice)
+                ->withErrors(['customer_name' => self::LOCKED_MESSAGE]);
         }
 
         $invoice = $this->writer->update($invoice, $this->documentData($request, true));

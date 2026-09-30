@@ -300,6 +300,21 @@ class Invoice extends Model
             : (string) $this->bill_no;
     }
 
+    /**
+     * True once money has been received against this bill, which closes it to
+     * editing.
+     *
+     * A bill with a receipt against it has been acted on: the customer has
+     * paid what the paper said, and the books, the ledger and the GST return
+     * all reference those figures. Changing the amount afterwards would leave
+     * a receipt for a sum the bill no longer claims. Cancelling it and
+     * raising a fresh one keeps both halves of the story.
+     */
+    public function getIsLockedAttribute(): bool
+    {
+        return (float) $this->paid_amount > 0;
+    }
+
     public function getStatusAttribute(): string
     {
         if ($this->is_voided) {

@@ -10,12 +10,12 @@
         </div>
         <div class="head-actions">
             <x-status-pill :status="$invoice->status" />
-            @unless($invoice->is_voided)
+            @if(! $invoice->is_voided && ! $invoice->is_locked)
                 <a href="{{ route('admin.invoices.edit', $invoice) }}" class="btn small">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5z"/></svg>
                     Edit
                 </a>
-            @endunless
+            @endif
             <a href="{{ route('admin.invoices.index') }}" class="btn ghost small">Back to list</a>
         </div>
     </div>
@@ -30,6 +30,15 @@
                     @csrf
                     <button type="submit" class="btn ghost small">Restore it</button>
                 </form>
+            </div>
+        </div>
+    @endif
+
+    @if($invoice->is_locked && ! $invoice->is_voided)
+        {{-- Said plainly rather than leaving a missing button unexplained. --}}
+        <div class="notice">
+            <div>
+                Paid against, so the figures are fixed. Remove the receipts below to edit it, or cancel it and raise a new one.
             </div>
         </div>
     @endif
